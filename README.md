@@ -1,6 +1,6 @@
 # Cubase Project File Reverse Engineering 
 
-While prying old cubase project files, I encountered a graduation project I had when studing home music production.
+While prying my old cubase project files, I encountered a graduation cubase project I made when studying home music production.
 I could load it in Cubase SX2, but for some reason, several VST's (mainly, Waves Bundle Compressors and EQs) had an addition to their name, e.g. instead of **C1 Comp** it appeared as **C1 Comp (z)**, instead of **REQ 4 bands** it was named **REQ 4 bands (z)** etc.
 
 I wanted Cubase to load them properly, but Cubase does not provide a mechanism to alter the names of the VSTs. 
@@ -13,7 +13,7 @@ As per writing these lines, it is still work in progress, as I'm doing solely by
 I managed to extract part of the 'VST Mixer' (F3 in Cubase) and to display it. I also managed to identify several tracks such as MIDI and Audio tracks, and display their names.
 The tool in its current state also try to display the file hierarchy in a Tree View form.
 
-Written in .NET Framework 8, Winform.
+Written in .NET Framework 4.8, Winform.
 
 Screenshot of the current state of the tool:
 
