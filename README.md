@@ -17,6 +17,6 @@ Written in .NET Framework 4.8, Winform.
 
 Screenshot of the current state of the tool:
 
-![image](https://github.com/omeriko9/Cubase-Project-File-Reverse-Engineering/assets/5153984/f8419e71-9c79-4784-9f86-d056c6fd4528)
+![image](https://github.com/omeriko9/Cubase-Project-File-Reverse-Engineering/assets/5153984/b8583fc4-6c4c-40c4-b63e-741af80d9682)
 
 Please do not currently ask me for features as this project is in its perliminary stages, and I'm still working on bugs and features I miss (for example, I still didn't implemented re-saving the project file after changing the VTS names).
