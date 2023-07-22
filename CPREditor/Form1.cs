@@ -140,18 +140,7 @@ namespace CPREditor
             }
         }
 
-        private void button3_Click(object sender, EventArgs e)
-        {
-            OpenFileDialog ofd = new OpenFileDialog();
-            var res = ofd.ShowDialog();
-            if (res == DialogResult.OK)
-            {
-                SelectedFileName = ofd.FileName;
-                Parse();
-            }
-
-
-        }
+     
 
         private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
         {
@@ -161,8 +150,7 @@ namespace CPREditor
                 he.IsEnabled = false;
                 he.Stream = new MemoryStream(rc.Data);
                 he.IsEnabled = true;
-                lblSelectedDataItem.Text = rc.ToString();
-                lblCurrentGlobalOffset.Text = "0x" + rc.InitialOffset.ToString("x4");
+                
                 listBox1.Items.Clear();
                 foreach (var t in (rc.DataStr.Split(new string[] { Environment.NewLine }, 0)))
                 {
@@ -181,8 +169,10 @@ namespace CPREditor
                 he.IsEnabled = false;
                 he.Stream = new MemoryStream(di.Data);
                 he.IsEnabled = true;
-                lblSelectedDataItem.Text = di.ToString();
-                lblCurrentGlobalOffset.Text = di.ToString();
+
+                SetLabels(di);
+
+
                 listBox1.Items.Clear();
                 foreach (var t in (di.DataStr.Split(new string[] { Environment.NewLine }, 0)))
                 {
@@ -194,15 +184,37 @@ namespace CPREditor
             treeView1.SelectedNode = e.Node;
         }
 
+        void SetLabels(DataItem di)
+        {
+            lblCurrentDataItem.Text = di.Name;
+            lblOffsetInFile.Text = $"0x{di.OffsetInFile.ToString("x4")}";
+            lblItemSize.Text = $"0x{di.SectionSize.ToString("x4")}";
+
+        }
+
         private void listBox1_MouseDoubleClick(object sender, MouseEventArgs e)
         {
             if (listBox1.SelectedItem != null)
             {
                 var str = listBox1.SelectedItem.ToString();
                 he.FindAll(str, true);
-
-
             }
+        }
+
+        private void loadToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog ofd = new OpenFileDialog();
+            var res = ofd.ShowDialog();
+            if (res == DialogResult.OK)
+            {
+                SelectedFileName = ofd.FileName;
+                Parse();
+            }
+        }
+
+        private void Exit_Click(object sender, EventArgs e)
+        {
+            Application.Exit();
         }
     }
 }
