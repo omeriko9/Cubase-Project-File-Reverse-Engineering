@@ -10,6 +10,8 @@ namespace Parse.DataItems
     {
         public const string sMTrackList = "MTrackList";
         public const string sFMemoryStream = "FMemoryStream";
+        public const string sVSTMixer = "VST Mixer";
+        
 
         public static DataItem Create(string name, byte[] data, int offsetInFile, byte[] entireData)
         {

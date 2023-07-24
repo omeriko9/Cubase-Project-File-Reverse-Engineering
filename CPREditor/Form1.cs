@@ -1,4 +1,5 @@
 ﻿using Parse;
+using Parse.DataItems;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -63,50 +64,31 @@ namespace CPREditor
             trvSections.Nodes.Clear();
             lstTracks.Items.Clear();
 
-            CubaseProjectFile cbf = new CubaseProjectFile(SelectedFileName);
-            cbf.Parse();
-
-            //CPR cp2 = new CPR();
-            //var offset = cbf.GetDataItem(cp2.sMTrackList);
-            //cp2.ParseSections2(); // (offset.OffsetInFile);
-
             CPR2 cpr2 = new CPR2();
             cpr2.Parse(File.ReadAllBytes(SelectedFileName));
 
-            //dataGridView1.Columns.Clear();
-            //dataGridView1.Rows.Clear();
             dataGridView1.DataSource = null;
             dataGridView1.AutoGenerateColumns = true;
 
-            var vstMixer = cpr2.FoundSections.Where(x => x.Name == "FMemoryStream").First().SubSections.Where(x => x.Name.Equals("VST Mixer")).First();
+            var vstMixer = cpr2.GetSection(DataItemFactory.sVSTMixer); 
 
             var mixer = DataItem.ToDataTable(vstMixer.SubSections);
-            mixer.Columns["Stereo Out"].SetOrdinal(mixer.Columns.Count - 1);
-            //mixer.Columns[mixer.Columns.Count - 1].SetOrdinal(1);
+            mixer.Columns["Stereo Out"].SetOrdinal(mixer.Columns.Count - 1);           
 
             dataGridView1.DataSource = mixer;
 
             treeView1.ShowRootLines = trvSections.ShowRootLines = true;
 
-            foreach (var c in cbf.Chunks)
-            {
-                TreeNode tn = new TreeNode(c.ToString());
-                tn.Tag = c;
-                PopulateTreeview(treeView1, c.DataItems);
-
-            }
-
             PopulateTreeview(trvSections, cpr2.FoundSections);
-            var trackList = cpr2.FoundSections.Where(x => x.Name == "MTrackList").FirstOrDefault();
+
+            var trackList = cpr2.GetSection(DataItemFactory.sMTrackList);
             if (trackList != null)
             {
                 foreach (var t in trackList.SubSections)
                 {
                     lstTracks.Items.Add(t.ToString());
                 }
-            }
-            
-
+            }            
         }
 
 
@@ -144,21 +126,6 @@ namespace CPREditor
 
         private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
         {
-            if (e.Node.Tag is ROOTChunk)
-            {
-                var rc = e.Node.Tag as ROOTChunk;
-                he.IsEnabled = false;
-                he.Stream = new MemoryStream(rc.Data);
-                he.IsEnabled = true;
-                
-                listBox1.Items.Clear();
-                foreach (var t in (rc.DataStr.Split(new string[] { Environment.NewLine }, 0)))
-                {
-                    listBox1.Items.Add(t);
-                }
-
-            }
-
             if (e.Node.Tag is DataItem)
             {
                 var di = e.Node.Tag as DataItem;

@@ -12,11 +12,16 @@ namespace Parse
 {
     public class CPR2
     {
+        public byte[] Header { get; private set; }
         public byte[] Data { get; private set; }
 
         public readonly string sROOT = "ROOT";
         public readonly string sARCH = "ARCH";
         public readonly string sPArrangement = "PArrangement";
+
+        public static byte[] Pad1 = ByteWalker.Pad1;
+        public static byte[] Pad2 = ByteWalker.Pad2;
+
         public List<DataItem> FoundSections { get; set; } = new List<DataItem>();
 
         private byte[] bs2 = new byte[0];
@@ -25,35 +30,57 @@ namespace Parse
         public void Parse(byte[] bytes)
         {
             Data = bytes;
-            
+            FillHeader();
             FillSections();
             FillTracks();           
             FillVSTMixer();           
 
         }
 
+        void FillHeader()
+        {
+            ByteWalker bw = new ByteWalker(Data);
+            Header = bw.GetBytesUntil(true, Encoding.ASCII.GetBytes("ROOT"));
+        }
 
         void FillSections()
         {
             ByteWalker bw = new ByteWalker(Data);
-           
+            bw.GetBytesUntil(true, Encoding.ASCII.GetBytes("ROOT"));
+
             // Top Level Sections
             while (bw.CurrentIndex < bw.Length)
             {
                 bw.bLastOneSkipped = false;
-                bw.GetBytesUntil(false, Encoding.ASCII.GetBytes("ARCH"));
+
+                //bs2 = bw.GetBytesUntil(false, Encoding.ASCII.GetBytes("ARCH"));
+
+                bs2 = bw.GetBytes(4); // ROOT
+
                 if (bw.CurrentIndex + 1 > bw.Length)
                     break;
-                var nextROOToffset = bw.GetInt() + bw.CurrentIndex;
+
+                var rootSize = bw.GetInt();
+
+                FoundSections.Add(new DataItem("ROOT", bw.GetBytes(rootSize), bw.CurrentIndex, Data));
+                bs2 = bw.GetBytes(4); // ARCH
+                var archSize = bw.GetInt();
+               
+                var nextROOToffset = archSize + bw.CurrentIndex;
+                var arch = new DataItem("ARCH", bw.PeekBytes(archSize), bw.CurrentIndex, Data);
+                FoundSections.Add(arch);
 
                 while (bw.CurrentIndex < nextROOToffset)
                 {
                     var di = GetNextSection(bw, nextROOToffset);
                     if (di != null)
-                        FoundSections.Add(di);
+                    {                        
+                        arch.SubSections.Add(di);
+                    }
                     else
                         break;
                 }
+                
             }
         }
 
@@ -306,7 +333,7 @@ namespace Parse
 
             if (!bw.bLastOneSkipped)
             {
-                var res = bw.GetBytesUntilDoNotExceed(false, maxOffset, Chunk.Pad1, Chunk.Pad2);
+                var res = bw.GetBytesUntilDoNotExceed(false, maxOffset, Pad1, Pad2);
                 if (res == null)
                     return null;
             }
@@ -317,7 +344,7 @@ namespace Parse
 
             var test = bw.GetInt();
 
-            if (BitConverter.GetBytes(test).SequenceEqual(Chunk.Pad2))
+            if (BitConverter.GetBytes(test).SequenceEqual(Pad2))
             {
                 //bw.GetBytes(2);
                 offsetInFile = bw.CurrentIndex;
@@ -375,7 +402,7 @@ namespace Parse
             }
             else
             {
-                sectionData = bw.GetBytesUntil(true, Chunk.Pad1, Chunk.Pad2);
+                sectionData = bw.GetBytesUntil(true, Pad1, Pad2);
             }
 
             var toReturn = DataItemFactory.Create(sectionName, sectionData, offsetInFile, Data);
@@ -386,6 +413,8 @@ namespace Parse
             return toReturn;
 
         }
+
+        
 
         public static Dictionary<string, SectionProperties> Sections = new Dictionary<string, SectionProperties>()
         {

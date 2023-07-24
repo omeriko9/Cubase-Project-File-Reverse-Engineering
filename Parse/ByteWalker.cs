@@ -11,6 +11,9 @@ namespace Parse
         public byte[] _data = null;
         public int CurrentIndex = 0;
         public int OriginalOffsetInFile = 0;
+
+        public static byte[] Pad1 = new byte[4] { 0xFF, 0xFF, 0xFF, 0xFE };
+        public static byte[] Pad2 = new byte[4] { 0xFF, 0xFF, 0xFF, 0xFF };
         public bool bLastOneSkipped { get; set; } = false;
         public int TotalSize { get { return _data.Length; } }
         public ByteWalker(byte[] data)
@@ -49,6 +52,11 @@ namespace Parse
             var toReturn = PeekInt();
             CurrentIndex += 4;
             return toReturn;
+        }
+
+        public bool PeekIsDelimiter()
+        {
+            return PeekBytes(4).SequenceEqual(Pad1) || PeekBytes(4).SequenceEqual(Pad2);
         }
 
         public byte[] GetInts(int howMany)
@@ -161,10 +169,6 @@ namespace Parse
             return _data.Skip(CurrentIndex).Take(length).ToArray();
         }
 
-        public bool PeekIsDelimiter()
-        {
-            return PeekBytes(4).SequenceEqual(Chunk.Pad1) || PeekBytes(4).SequenceEqual(Chunk.Pad2);
-        }
 
         public string GetStringBySize()
         {

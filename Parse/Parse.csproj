@@ -46,12 +46,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ARCHChunk.cs" />
-    <Compile Include="Chunk.cs" />
-    <Compile Include="CPR.cs" />
     <Compile Include="CPR2.cs" />
-    <Compile Include="CubaseProject.cs" />
-    <Compile Include="CubaseProjectFile.cs" />
     <Compile Include="DataItems\DataItem.cs" />
     <Compile Include="DataItems\DataItemFactory.cs" />
     <Compile Include="DataItems\FMemoryStreamDataItem.cs" />
@@ -61,10 +56,9 @@
     <Compile Include="DataItems\MTrackEventDataItem.cs" />
     <Compile Include="DataItems\MTracklistDataItem.cs" />
     <Compile Include="Extensions.cs" />
-    <Compile Include="FileWalker.cs" />
+    <Compile Include="ByteWalker.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ROOTChunk.cs" />
     <Compile Include="DataItems\MListNodeDataItem.cs" />
   </ItemGroup>
   <ItemGroup>
