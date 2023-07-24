@@ -1,0 +1,885 @@
+CPR File Structure Analysis
+
+I will attempt to reverse engineer the CubaseSX (2.0.2) .CPR file format with you, the currently still imaginary reader.
+The goal is portability so I assume it is legal. I have some (very) old cubase project files with slightly wrong names for VST, specifically from Waves bundle. If only I could load the project in cubase, edit the VST names and then activate the project it would be wounderful, but, unfortunately, cubase has no such option.
+
+By reverse engineering the cubase project file I could write such tool that will allow altering the names of the VSTs (and maybe more), so they will load correctly in Cubase. This might be a niche need, but I'm planning on having fun along the way so here we go.
+
+First step - opening a CPR file in a Hex editor. I like HxD so I use that.
+Let's try to get first impressions.
+
+Header
+Magic Header
+Upper case section names
+strings
+etc.
+
+
+
+Starting from 'ARCH', the following segments and sub-segments can be identified:
+
+PArrangement	00 00 03 [4 byte size]
+
+MGroupEvent 	00
+MPartEvent 		01
+MEvent 			01
+
+MRoot			00 00 05 [4 byte size]
+
+MDataNode 		00
+MTrackList		00 00 00 [ 4 byte size ]
+	4 byte String Size
+	String
+	???
+FF FF FF FE delimiter
+
+MTrackEvent		02
+MAudioTrackEvent	01	
+[4 byte section size]
+	MListNode 
+	00 00 00
+	[4 byte section size]
+	4 byte String size
+	String (?first audio track?)
+	FF FF FF FF delimiter
+	4 byte String size
+	'MTempoTrackEvent'
+	00 00 01
+	4 byte size
+	Data
+	FF FF FF FF delimiter
+	4 byte string size
+	MSignatureTrackEvent
+	00 00 01
+	4 byte size
+	Data
+00 00 00 01
+otuA
+00 01 00 00
+00 00 00 00 00 00
+FF FF FF FE delimiter
+4 byte string size
+MTrack
+00 00 01
+FF FF FF FF delimiter
+4 byte string size
+MAudioTrack
+00 00 00
+[4 byte section size]
+...
+MAutomationNode
+00 00 01
+[4 byte section size]
+MMidiTrackEvent
+00 00 02	
+[4 byte section size]
+	00 01
+	00 x 8
+	41 21 94
+	00 x 13
+	80 00 01 7D
+	[4 bytes sub section size]
+	[4 bytes string size]
+	MIDI Track Name
+	00 x 3
+	00 00 00 01
+	...
+	FF FF FF FF delimiter
+	'MMidiTrack'
+	00 00 04
+	[4 bytes sub section size]
+		00 03
+		[4 bytes String size]
+		'DirectMusic'
+		...
+		FF FF FF FE delimiter
+		'PMixerChannel'
+		FF FF FF FE delimiter
+		'DeviceNode'
+		FF FF FF FE delimiter
+		'FNode'
+		FF FF FF FF delimiter
+		'PMidiChannel'
+		00 00
+		[4 bytes sub section size]
+			[4 bytes string size]
+			MIDI Channel name
+			02 00 10 00
+			00 x 4
+			0A 45
+			00 00 00 04
+			00 x 12
+			FF FF FF FE delimiter
+			[4 bytes string size]
+			'PDevice'
+			0x3
+			FF FF FF FF delimiter
+			[4 bytes string size]
+			'PMidiEffectBase'
+			00 02 00 00
+			01 12 00 00 00
+			[4 bytes string size]
+			'Splitter1'
+			00 x 11
+			05 00 01
+			00 00 00 01
+			FF FF FF FE
+			[4 bytes string size]
+			'PMultiInput'
+
+
+
+
+PDrumMapPool
+...
+etc
+
+
+
+Some Thoughts/observations:
+---------------------------
+* The first MIDI Track can be observed at 'MMidiTrackEvent' after some bytes of metadata
+* Order of segments is irrelevant?
+* looks like a layer model? Each layer contains size, some data and inner layers which contains the same and so on?
+* There are two main types of delimiters, 0xFFFFFFFF and 0xFFFFFFFE, perhaps the difference is between internal metadata and another field?
+* There seems to be more types of delimiters, e.g. for MIDI parts (actual MIDI notes) we can observe the following delimiter: FF FF FF FF FF FF FF FF FF FF FF FF 00 - still needs further investigation
+
+Problem is that for the other MIDI Tracks (except for the first one), there aren't any sections with string names describing it, contrary to the first one.
+Perhaps the same order of the first one is assumed?
+
+
+Let's compare the 2nd MIDI Track to the first one (the one with annotations) for the file 'many.cpr':
+
+
+First MIDI Track 				Second MIDI Track
+---------------------------------------------------
+MMidiTrackEvent					MISSING
+00 00 02						00 00 02
+MISSING							00 80 00 56 5B 
+[4 byte section size] 			[4 byte setion size]
+	00 01						00 01
+	00 x 8 						00 x 8
+	41 21 94 					41 21 49
+	00 x 13  					00 x 13
+	80 00 01 7D 				80 00 02 25
+	[4 bytes sub section size] 	[4 bytes sub section size]
+	[4 bytes string size] 		[4 bytes string size]
+	MIDI Track Name 			MIDI Track Name
+
+This seems to be somewhat in correlation with my hypothesis. 
+
+Now let's do the same for chill-01.cpr in order to gain confidence in this hypothesis:
+
+First MIDI Track (bass drum) 			     			MIDI 07 Track
+-------------------------------------------------------------------
+MMidiTrackEvent									 		MISSING
+00 00 02 												00 00 02
+MISSING													00 x 26
+MISSING													04 01 3E ED 95 DB 00 00
+MISSING													00 06 19 0F
+MISSING													00 x 6
+MISSING													80 00 01 44
+[4 byte section size] 0xFF08							[4 byte section size] 0xA2C6
+	00 00 													00 00
+	00 x 8 													00 x 8
+	41 18 E6  												41 18 E6
+	FF F5 9F C0 04 + 00 x 8 								FF F5 9F C0 04 + 00 x 8
+	FF FF FF FF delimiter 									MISSING
+	[4 bytes string size] 									MISSING
+	'MListNode' 											MISSING
+	00 00 00 												80 00 01 7C
+	[4 bytes sub section size] 0xF43B 						[4 bytes sub section size] 0x99C6
+	00 00 00 												00 00 00
+	[4 bytes string size]									[4 bytes string size]
+	'bass drum' [First MIDI Track name]						'MIDI 07'
+	00 x 5 													00 x 4
+	FF FF FF FF delimiter 									MISSING
+	00 00 00 												MISSING
+	[4 bytes string size] 									MISSING
+	MTempoTrackEvent 										MISSING
+															[4 bytes sub section size] 0x01C1
+
+
+
+The hypoethesis seems to be somewhat correct, as some parts exist only in the first track (namely the section names and delimiters),
+and other exist only in the second part (the unknown dwords starting with 0x80 00 01), there is a level of correlation between two MIDI tracks in the same project file.
+
+On the other hand, there seems to be much more missing parts in the chill-01.cpr file than in many.cpr.
+Perhaps due to the complexity of the project file? many many tracks, Audio and Midi interleaved? 
+
+Several open questions:
+* The differences between first MIDI track and other tracks are not neglegable, what is their meaning?
+* What does the different bytes means?
+* How can one tell what number of MIDI track is it among the other tracks?
+* What is the internal structure of 'MListNode', specifically the MIDI Parts inside the track?
+* What is the structure and order of the MIDI effects inside the node?
+
+I still do not feel comfortable with the comparison for chill-01.cpr, let's take another MIDI track and compare to the previous ones:
+
+
+First MIDI Track (bass drum) 			     			MIDI 07 Track 									Piano Track
+----------------------------------------------------------------------------------------------------------------------
+MMidiTrackEvent									 		MISSING											80 01 00 2E 00 00 00 0E 00 00 00 ???
+00 00 02 												00 00 02 										00 00 02
+MISSING													00 x 26											00 x 10
+MISSING													04 01 3E ED 95 DB 00 00 						FF FF FF FF
+MISSING													00 06 19 0F 									FF FF FF FF
+MISSING													00 x 6 											00 x 6
+MISSING													80 00 01 44 									80 00 01 44
+[4 byte section size] 0xFF08							[4 byte section size] 0xA2C6 					[4 byte section size] 0xCF4B
+	00 00 													00 00 											00 01
+	00 x 8 													00 x 8 											00 x 8
+	41 18 E6  												41 18 E6 										41 18 E6
+	FF F5 9F C0 04 + 00 x 8 								FF F5 9F C0 04 + 00 x 8 						FF F5 9F C0 04 + 00 x 8
+	FF FF FF FF delimiter 									MISSING 										MISSING
+	[4 bytes string size] 									MISSING 										MISSING
+	'MListNode' 											MISSING 										MISSING
+	00 00 00 												80 00 01 7C 									80 00 01 7C
+	[4 bytes sub section size] 0xF43B 						[4 bytes sub section size] 0x99C6 				[4 bytes sub section size] 0xC637
+	00 00 00 												00 00 00 										MISSING
+	[4 bytes string size]									[4 bytes string size] 							[4 bytes string size]
+	'bass drum' [First MIDI Track name]						'MIDI 07' 										'Piano'
+	00 x 5 													00 x 4 											00 x 4
+	FF FF FF FF delimiter 									MISSING 										MISSING
+	00 00 00 												MISSING 										MISSING
+	[4 bytes string size] 									MISSING 										MISSING
+	MTempoTrackEvent 										MISSING 										MISSING
+															[4 bytes sub section size] 0x01C1 				[4 bytes sub section size] 0x01C1
+
+So, my next urgent question is what I asked before - how do I know when each MIDI track starts? 
+There are two prime options:
+
+1. At the end of each previous track (midi or not), the new track will start
+2. There is a table of pointers somewhere before (probably not) or after the first track
+3. Using the delimiters somehow.
+
+My gut feeling is that it is option 1 or 3, but not 2.
+Let's try to verify it.
+We will do that by 'walking' down the tracks, meaning checking the section name, its size, and jumping to a place exactly after it's size.
+
+But - what will be our first section? 
+'MMidiTrackEvent' won't be a good fit since we can have only Audio tracks.
+Let's try to find a higher level tag for our journey.
+These are the possible high level tags, for the file 'many.cpr':
+
+PArrangement (offset 0x008E, size 0xAA7F)
+MTrackList   (offset 0x014B, size 0x869D)
+MFolderTrack (offset 0x01AC, size 0x54FC)
+MMidiTrackEvent (off 0x56eb, size 0x0C31) <- agreed that this is not a goot option
+
+Notice the overlap which, again, hints that we might have layers model here, similar to an onion.
+
+So, let's start with the first one :P
+
+`PArrangement 	0x009E -> 0xAA7F
+00 00 3F F0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 3F F0 00 00 00 00 00 00 00 00 FF FF FF FF
+`PArrangeSetup   0xAAB2 -> 0xAB13
+00 01 
+00 00 00 5C <- Size
+... More metadata ...
+0xAB14: 00 x 12
+`ROOT 			0xAB20 -> 0xAB43
+`ARCH			0xAB44 -> 
+
+So, looks like we're too far ahead.
+Let's try 'MTrackList':
+
+`MTrackList		0x014B -> 0x869D
+PAMD
+PDrumMapPool
+PDrumMap
+MMidiQuantize
+MGridQuantize
+
+Let's try MFolderTrack:
+`MFolderTrack
+`MMidiTrackEvent
+
+Interesting. So since MMidiTrackEvent is not contained within MFolderTrack, following MFolderTrack lead us to the next section which is the MMidiTrackEvent, the one we wanted to avoid.
+
+So let's follow it.
+
+Following MMidiTrackEvent size, we get to something that looks like another MMidiTrackEvents, only without the strings, as expected from previous observations:
+
+00 00 02
+00 80 00 56 5B 
+[4 byte setion size] 0x09DC
+00 01
+00 x 8
+41 21 49
+00 x 13
+80 00 02 25
+[4 bytes sub section size]
+[4 bytes string size]
+MIDI 02 [MIDI Track Name]
+
+As previously explored on Table 1.1
+
+So, it means that we might have found the answer we were looking for.
+
+Let's try to get to the third MIDI track, by skipping over the entire data:
+
+offset 0x62EC jumping 0x09DC -> 0x6CCA
+0x6CCA:
+
+80 00 56 5B
+00 00 09 08
+00 00
+00 x 8
+41 21 94
+00 x 13
+80 00 02 25
+[4 bytes sub section size] 0x1C
+[4 bytes string size] 0x8
+MIDI 04 [MIDI Track name]
+
+
+YES!!! looks like a win! (The structure we got is identical in skeleton to the previous MMidiTrackEvent section)
+
+
+Nevertheless, we cannot truly complete this phase of research without exploring what happens with MAudioTrackEvent, so let's do the same with that (we will use chill-01.cpr since many.cpr does not contain audio tracks):
+
+First instance of MAudioTrackEvent:
+
+0x44C31 11 MAudioTrackEvent
+		00 00 01
+		00 00 1D 01 <- Size
+		00 x 10
+		41 18 E6 
+		FF F5 9F C0 04
+		00 x 8
+		80 00 01 7C
+		00 00 0B E1 <- Size
+
+So let's skip 0x1D01:
+
+0x4694A 	80 00 01 44
+			00 00 50 E1 <- Size
+			00 x 10
+			41 18 E6
+			FF F5 9F C0 04
+			00 x 8
+			80 00 01 7C
+			00 00 47 D7 <- Size
+			00 00 00 05 <- String Size
+			Alya
+
+Again, let's skip 0x50E1 from 0x4694A:
+
+0x4BA30		80 04 4B EE
+			00 00 17 1A <- Size
+
+
+Ok this looks like we nailed it.
+
+But there is still a mystery here.
+looking at the following lines:
+
+
+			80 00 01 7C
+			00 00 0B E1 <- Size
+
+and
+			80 00 01 7C
+			00 00 47 D7 <- Size
+
+This looks like "80 00 01 7C" represents a section that its name was ommited.
+Perhaps, if a section was named once in the file, no matter if it was Audio or MIDI track, the next time that section appears it will appear without a name (and 4 byte string size), only with this "encoding".
+(Perhaps this 'encoding' is even a pointer to the memory location of the string or an index to some list of strings, omitting the '80').
+
+So question is - how can we understand what was this kind of section?
+searching the file for "80 00 01 7C" won't help since the section is either mentioned by name OR by its encoding, not both.
+
+A clumsy approach would be to have a cpr file containing 2 audio tracks with 2 audio parts, searching for the first one by name, and inducing from that the name of the section.
+
+Since I'm clumsy some times, let's do exactly that.
+
+Creating a new project with 2 audio tracks reveals that the section name is PAudioClip:
+
+(2audiotracksw2audioparts.cpr)
+
+0x2BA: 0B (string size)
+       PAudioClip
+       00 00 03
+       00 00 01 EB <- Size
+       00 00 00 0D <- String size
+       cd1track222 <- Audio clip name
+
+Let's verify that by searching for "80 00 01 7C" and seeing if we find there the second audio clip:
+
+So searching for "80 00 01 7C" didn't give any results.
+Ok, let's search for the second audio clip's name, "cd1track222  (2)":
+
+	80 00 02 77
+	00 00 03 55
+	00 00 00	
+	11
+	cd1track222  (2)
+
+Ok, I think I start to understand my mistake now.
+I was searching for the *audio clip's name* instead of the *audio track name* (The relation between audio track to audio clip is one to many, one audio track can contain many audio clips).
+So let's do the latter. Searching for "Audio 01":
+
+
+
+00 00 00 11 <- String size
+MAudioTrackEvent
+	00 00 01
+	00 00 08 74 <- Section Size
+	00 01
+	00 x 8
+	41 21 94
+	00 x 13
+	FF FF FF FF
+	00 00 00 0A <- String Size
+	MListNode
+		00 00 
+		00 00 03 19 <- Section Size
+		00 00 00 09 <- String Size
+		Audio 01
+
+Now let's search for the second Audio track's name ("Audio 02"):
+
+
+	04 01
+	3F 4A 09 94
+	00 00
+	00 00 09 A1 <- Section Size
+	00 x 6 
+	80 00 01 44 <- MAudioTrackEvent encoding probably
+	00 00 08 8F <- Section Size
+	00 x 10
+	41 21 94
+	00 x 13
+	08 00 01 7D <-- MListNode, probably
+	00 00 03 C4
+	00 00 00
+	09 <- String size
+	Audio 02
+
+~~~~~~~~~~~~~
+Aha! So MListNode for audio, represented by "08 00 01 7D" is the Audio Track equivalent of MListNode for MIDI, represented by the so similar 4 bytes "80 00 01 7C".
+And the MMidiTrackEvent (80 00 56 5B) is the MIDI equivalent for Audio's MAudioTrackEvent (80 00 01 44)
+~~~~~~~~~~~~~
+
+
+Let's revise the open questions from earlier and see how many we can answer now:
+
+* The differences between first MIDI track and other tracks are not neglegable, what is their meaning?
+The first time a track appears, it would have a string representation of its name.
+But starting at its second appearance and forward, it will only be represented with a 4 byte sequence (and some other bytes around it).
+
+* What does the different bytes means?
+They might be an index to a strings list or hard coded encoding for that specific type of section.
+
+* How can one tell what number of MIDI track is it among the other tracks?
+One should "walk" the binary sections structure, starting at MMidiTrackEvent for MIDI and MAudioTrackEvent for audio, and in order to get to the next track, one should skip the size of the section. It will lead right into the beginning of the next track (I hope).
+
+* What is the internal structure of 'MListNode', specifically the MIDI Parts inside the track?
+Didn't get to that yet but I have a general idea.
+
+* What is the structure and order of the MIDI effects inside the node?
+Didn't get to that yet, also didn't get to the Audio structure as well.
+
+
+Now it's time to ask ChatGPT to write us code that parses the cpr file according to the findings.
+
+
+Starting to write the code I encountered two problems.
+
+The first is that for some projects, the bytes between 'MMidiTrackEvent' and 'MListNode' are different; 
+many.cpr:
+...41 21 94 00 00 00 00 00 00 00 00 00 00 00 00 00 80 00 02 25 00 00 01 C6
+chill-01.cpr:
+...41 18 E6 FF F5 9F C0 04 00 00 00 00 00 00 00 00 FF FF FF FF 00 00 00 0A
+
+Notice that in many.cpr, 80 00 02 25 represents MListNode, and the next 4 bytes are the length of the MListNode, but in chill-01.cpr FF FF FF FF represents a delimiter (or placeholder), and the 00 00 00 0A that follows represents the length of the string to come (which is 'MListNode'). This of course breaks any attempt to parse it only by byte count because
+a. In the first case one needs to 'know' that 80 00 02 25 is the entire representation of MListNode including the string size & string, and
+b. In the second case one needs to 'know' how to ignore (or understand) the FF FF FF FF delimiter/placeholder.
+
+
+Now my focus is understanding the 80 00 02 25, 80 00 01 C6 etc. format.
+
+
+1C6 + A1 = 268
+1EB + A1 = 26C
+225 + A1 = 2C6
+2DD + A1 = 
+56B7+ A1 = 
+59F0+ A1 = 
+5A54+ A1 = 
+17C - 1BE = 
+
+
+
+186 - 144 = 42
+
+many.cpr
+80 00 02 25 - A1 = 0x184 MFolderTrack
+80 00 00 F6
+80 00 01 44 - A1 = A3
+80 00 03 67 - A1 = ?
+80 00 04 26 - A1 = ?
+80 00 02 DD - A1 = 
+80 00 5A B7 - A1 = 
+
+It seems to be like the 80 at the beginning only signify that it is some kind of offset. 
+Initially I thought it might be pointer to a string table or index to that table, but I have explored the option it might be an offset from the beginning of the file.
+
+So, to see if it makes sense, I took the following example from 'many.cpr':
+
+0x62E6: 80 00 56 5B
+Let's examine offset 0x565B in the file: 6F 53 00 01 00
+This is the middle of the reversed string 'oloS', so it does not make any sense.
+Now let's look around it, perhaps there is some constant that needs to be added or substracted from 565B.
+At 0x569E we find 'MMidiTrackEvent'. This is a diff of positive 0x43 (addition).
+Let's go back to 0x62E6 and see if MMidiTrackEvent makes sense there:
+80 00 56 5B <- Potential candidate for MMidiTrackEvent
+00 00 09 DC <- section size
+00 01
+00 x 8
+41 21 94
+00 x 13
+80 00 02 25
+00 00 00 D8 <- section size
+00 00 00 08 <- string size
+MIDI 02
+
+Yes, it does make sense. And according to the format we discovered earlier, we expect 80 00 02 25 to be 'MListNode'.
+Let's take 0x0225+0x43 and see where it leads us to: 
+0x268: 0A 4D 4C 69 73 74 4E 6F 64 65 MListNode
+
+Nice! so the assumption seems to be correct.
+
+Let's do the same with chill-01.cpr:
+
+
+0x53107: 80 00 01 7C
+My guess is that it is MMListNode (but I might be wrong).
+Let's see what we have around 0x17C:
+0x1BF: 0A 4D 4C 69 73 74 4E 6F 64 65 MListNode
+
+Bingo!!!
+So the diff is (maybe) always 0x43 positive.
+We will have to examine that further but for now it is good enough.
+
+
+These bits and pieces still does not give us the full picture of how to parse the entire file or specific sections/sub sections, but we are making progress and that's great. From a big pile of bytes we can make sense of some small segments of bytes, locally. 
+This kind of advancement is gives a nice dophamine boost that encourage to continue forward.
+
+Note to future self: why 0x43?
+
+
+
+So let's recap what we know so far:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We have MMidiTrackEvent and MAudioTrackEvent and maybe more types of track event sections
+Sections are modeled by layers: each section can be the final layer, or it can be a container for a smaller layer.
+Each section is starting either by String Length+Section Name (String), or by 80 followed by 3 bytes of offset inside the file (+0x43) to the name of that section.
+
+
+
+Now say we want to write code that parses MMidiTrackEvents and their MListNodes.
+What's missing is where to start. Where is the first MMidiTrackEvent? How can we find its offset?
+
+As always, let's take several examples and try to induce from that.
+
+many.cpr:
+The first instance of MMidiTrackEvent is at offset 0x569E.
+chill-01.cpr:
+First instance of MMidiTrackEvent is at offset 0x188.
+
+The only common thing between the two instances is the prefix FF FF FF FF prior to the section name's size:
+
+many.cpr
+FF FF FF FF 00 00 00 10 4D 4D 69 64 69 54 72 61 63 6B 45 76 65 6E 74
+chill-01.cpr:
+FF FF FF FF 00 00 00 10 4D 4D 69 64 69 54 72 61 63 6B 45 76 65 6E 74
+
+But, there is an hierarchy of sections.
+Prior to MMidiTrackEvent there is MTrackEvent, and prior to that there's MTrackList.
+
+So let's try to understand these.
+
+MTrackEvent in both files is at offset 0x171, both has the same 3 bytes following it: 00 00 02
+Perhaps it's constant or was not changed enough in both files. 
+Let's go up further.
+
+MTrackList in both files is at offset 0x13A, and looks like this:
+
+chill-01.cpr:
+[str size] 	
+MTrackList
+			00 00 
+			00 06 BB 04  <- Section size?
+			00 00 00 09 <- String size
+			Untitled
+			00 00
+			00 01 3F F0 <- ???
+			00 x 8
+			00 00 00 0E <- Num of tracks?
+			FF FF FF FE
+			MTrackEvent 
+			...
+
+many.cpr:
+[str size] 	
+MTrackList
+			00 00   
+			00 00 86 9D <- Section Size
+			00 00 00 09 <- String size
+			Untitled
+			00 00 
+			00 01 3F F0 
+			00 x 8
+			00 00 00 06 <- Num of tracks?
+			FF FF FF FE
+			...
+
+Initial observations:
+0x013FF0 does not seem to be the size of the section, that offset hits in the middle of something in both files.
+So maybe the last byte is the amount of tracks in the list?
+
+To find this out, I would prefer to write code that try to parse as many tracks as possible, then comparing the number of tracks successfully parsed with the number in each file.
+
+Note that there are other types of tracks besides audio and midi - there are also MFolderTrack and maybe more.
+
+
+
+
+MTrackList
+	MTrackEvent
+		MMidiTrackEvent
+		MAudioTrackEvent
+	MFolderTrack
+		MTrackList
+
+
+Let's explore MFolderTrack in many.cpr
+
+00 00 00 0D <- String Size
+MFolderTrack
+00 00
+00 00 54 FC <- Section Size
+00 x 10
+40 82 C0
+00 x 13
+	80 00 00 F6 <- MTrackList
+	00 00 54 6E <- Section Size
+	00 00
+	00 00 00 10 <- String Size
+	VST Instruments
+	00 00
+	00 01 3F F0 <- ???
+	00 x 8
+	00 00 00 08 <- ??? Number of items ???
+		80 00 01 44 <- MFolderTrack
+		00 00 04 9F <- 4 bytes section size
+		00 x 10
+		40 82 C0
+		00 x 13
+			80 00 00 F6 <- MTrackList
+			00 00 04 11 <- Section Size
+			00 00 00 04 <- String size
+			FM8
+			00 00 00 01 3F F0 <- ???
+			00 x 8
+			00 00 00 02 <- ?? Number of items ???
+			FF FF FF FF
+				00 00 00 12 <- String size
+				MDeviceTrackEvent
+				00 00
+				00 00 02 68 <- section size
+				00 20
+				00 x 8
+				41 21 94
+				00 x 13
+				FF FF FF FF
+					00 00 00 0A <- string size
+					MListNode
+					00 00
+					00 00 00 8E <- Section size
+						00 00 00 04 <- String size
+						FM8
+						00 x 5
+						FF FF FF FF
+						00 00 00 11 <- string size
+						MTempoTrackEvent
+						00 01
+						00 00 00 24 <- section size
+						...
+						FF FF FF FF
+						00 00 00 15 <- string size
+						MSignatureTrackEvent
+						00 01
+						00 00 00 18 <- Section size
+						...
+						FF FF FF FF
+						00 00 00 07 <- string size
+						MTrack
+						00 01
+						00 00 00 69 <- section size
+						...
+						00 00 00 28 <- section size
+						...
+
+That didn't give any insight, I believe.
+
+Let's try in chill-01.cpr:
+
+
+0x4D159:
+
+00 00 00 0D <- String Size
+MFolderTrack
+00 00
+00 00 1F 8C <- Section Size
+00 x 10
+40 82 C0
+00 x 13
+	80 00 00 F6 <- MTrackList
+	00 00 1E FE <- Section size
+
+Similar enough.
+Can I just skip this entire section?
+What happens, say, in many.cpr after 0x54FC bytes from MFolderTrack?
+
+0x5697:
+FF FF FF FF
+00 00 00 10 <- String size
+MMidiTrackEvent
+
+
+Oh good, I can skip it for now.
+
+
+
+Looks like MListNode is different if it's coming after MAudioTrackEvent and MMidiTrackEvent
+
+This is in MAudioTrackEvent (chill-01.cpr):
+
+80 00 01 7C 	<- MListNode
+00 00 0B E1 	<- section size
+00 00 00 05 	<- string size
+Alya 		<- Audio track name
+00 x 4
+00 00 01 C1 	<- size?
+00 00 02 08 	<- ?
+00 00 00 10  	<- ?
+FF FF FF FF
+
+This is in MMidiTrackEvent (same file):
+00 00 00 0A 	<- String Size
+MListNode
+00 00
+00 00 F4 3B 	<- Section Size
+00 00 00 0A 	<- String size
+bass drum 	<- MIDI Track name
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+The research focuses on reverse engineering a Cubase project file (.cpr). The author has analyzed the file structure, breaking it down into identifiable segments and sub-segments. The segments include a number of Events (like MGroupEvent, MPartEvent, MEvent), Root, DataNode, TrackEvent, AudioTrackEvent, and many others. These segments are associated with sizes encoded in a 4 byte pattern.
+
+The author also identified two main types of delimiters, 0xFFFFFFFF and 0xFFFFFFFE, possibly signifying different kinds of metadata fields. There might be more types of delimiters that still need further investigation.
+
+A significant finding was that while the first MIDI Track can be identified, subsequent MIDI Tracks lack identifiable sections with string names, leading the author to theorize that the structure might assume the same order as the first one.
+
+The author proceeded to compare the structure of the first MIDI Track with others in different project files. The comparison resulted in a partial correlation, suggesting that some information might only exist in the first track and others only in the second track, but the hypothesis requires further testing.
+
+Open questions the author wants to answer include the differences between the first MIDI track and other tracks, the meanings of different byte patterns, how to identify the number of the MIDI track among others, and the internal structure of segments like 'MListNode'. 
+
+Lastly, the author discussed the need to identify the starting point of each MIDI track. There are three possibilities: that each new track starts at the end of the previous one, that there's a table of pointers, or that it involves the use of delimiters. The author leans towards the first or third options and plans to verify this by 'walking' down the tracks, checking the section name and size, and jumping to the location immediately after the segment's size. Future steps in the analysis will also involve finding a higher-level tag for this process.
+
+
+
+Analysis of CPR File Structure 
+
+The analysis begins at 'ARCH', where the following segments and sub-segments are identified:
+
+Segment: PArrangement | Offset: 00 00 03 (4 bytes)
+
+Sub-Segments:
+
+MGroupEvent | Offset: 00
+MPartEvent | Offset: 01
+MEvent | Offset: 01
+
+Segment: MRoot | Offset: 00 00 05 (4 bytes)
+
+Sub-Segments:
+
+MDataNode | Offset: 00
+MTrackList | Offset: 00 00 00 (4 bytes)
+MTrackEvent | Offset: 02
+MAudioTrackEvent | Offset: 01
+MAutomationNode | Offset: 00 00 01
+MMidiTrackEvent | Offset: 00 00 02
+
+Each segment follows a specific pattern, typically including a 4-byte size, a String, followed by an undefined sequence (?), and ending with a delimiter FF FF FF FE. Inside these segments, there are multiple sub-segments, some of which have the same structure and consist of a 4-byte size and a String name, followed by Data and a delimiter. 
+
+Hypothesis and Observations:
+
+1. Segments seem to follow a layer model where each layer contains a size, data, and inner layers that have similar structure.
+2. Order of segments may not be crucial.
+3. Two main types of delimiters are present: 0xFFFFFFFF and 0xFFFFFFFE, potentially differentiating between internal metadata and other fields.
+4. Other delimiter types exist, especially for MIDI parts; for example, FF FF FF FF FF FF FF FF FF FF FF FF 00. This needs further investigation.
+5. String names that describe segments are missing for MIDI tracks other than the first one. The first one might be setting an order that is assumed for the following tracks.
+   
+When comparing different MIDI tracks within the same project file, a level of correlation becomes apparent. However, the differences between the first MIDI track and the others are significant. Further investigation is required to understand the meaning behind these variations.
+
+Outstanding Questions:
+
+1. What do the differences between the first MIDI track and other tracks imply?
+2. How can we interpret the different bytes?
+3. How do we determine the order of the MIDI tracks?
+4. What is the internal structure of 'MListNode', specifically regarding the MIDI parts within the track?
+5. What is the structure and order of the MIDI effects within the node?
+
+To determine where each MIDI track begins, we could consider the following approaches:
+
+1. Each new track (MIDI or otherwise) begins at the end of the previous one.
+2. A table of pointers exists somewhere before or after the first track.
+3. Delimiters might mark the beginnings of new tracks.
+
+Our analysis suggests options 1 and 3 are more probable than option 2. The next step is to verify this by "walking" down the tracks—i.e., checking each section's name and size and advancing to the space immediately after it. 
+
+Initial checks indicate that the file structure might be layered, similar to an onion. The segments appear to overlap, further supporting this observation. A comprehensive exploration of high-level tags for the 'many.cpr' file and a comparison of different MIDI tracks within the same project file could provide further clarity.
+
+In conclusion, while preliminary analysis has provided some insight into the CPR file structure, more research is needed to resolve the outstanding questions and confirm hypotheses about the relationships between different tracks and their internal structures.
