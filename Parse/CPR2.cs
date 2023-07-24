@@ -18,18 +18,32 @@ namespace Parse
         public readonly string sARCH = "ARCH";
         public readonly string sPArrangement = "PArrangement";
         public List<DataItem> FoundSections { get; set; } = new List<DataItem>();
+
+        private byte[] bs2 = new byte[0];
         //bool bLastOneSkipped = false;
 
         public void Parse(byte[] bytes)
         {
             Data = bytes;
+            
+            FillSections();
+            FillTracks();           
+            FillVSTMixer();           
+
+        }
+
+
+        void FillSections()
+        {
             ByteWalker bw = new ByteWalker(Data);
-            var bs2 = new byte[0];
+           
             // Top Level Sections
             while (bw.CurrentIndex < bw.Length)
             {
                 bw.bLastOneSkipped = false;
                 bw.GetBytesUntil(false, Encoding.ASCII.GetBytes("ARCH"));
+                if (bw.CurrentIndex + 1 > bw.Length)
+                    break;
                 var nextROOToffset = bw.GetInt() + bw.CurrentIndex;
 
                 while (bw.CurrentIndex < nextROOToffset)
@@ -41,17 +55,17 @@ namespace Parse
                         break;
                 }
             }
+        }
 
-            bw.bLastOneSkipped = false;
-
-            // Inner Sections
-
+        void FillTracks()
+        {
             // MTrackList
-            MTracklistDataItem trackList = FoundSections.Where(x => x.Name.Equals(DataItemFactory.sMTrackList)).First() as MTracklistDataItem;
+            MTracklistDataItem trackList = GetSection(DataItemFactory.sMTrackList) as MTracklistDataItem;
             ByteWalker bwTrackList = new ByteWalker(trackList.Data);
-            trackList.UntitledString = bwTrackList.GetStringBySize();// (bwTrackList.GetInt());
+            trackList.UntitledString = bwTrackList.GetStringBySize();
 
-            while (bwTrackList.Length - bwTrackList.CurrentIndex - 0x1f > 0) //bwTrackList.CurrentIndex < bwTrackList.Length - 1)
+            // Get Tracks
+            while (bwTrackList.Length - bwTrackList.CurrentIndex - 0x1f > 0)
             {
                 var track = GetNextSection(bwTrackList, bwTrackList.Length);
                 track.OffsetInSection = track.OffsetInFile;
@@ -59,7 +73,6 @@ namespace Parse
 
                 if (track is MMidiTrackEventDataItem || track is MAudioTrackEventDataItem)
                 {
-
                     var bwnode = new ByteWalker(track.Data);
                     bwnode.bLastOneSkipped = true;
                     bwnode.CurrentIndex += 26;
@@ -77,28 +90,20 @@ namespace Parse
                 }
                 trackList.SubSections.Add(track);
             }
+        }
 
-            {
-                // MMidiTrackList
-
-            }
-
-            // FMemoryStream
-
-            FMemoryStreamDataItem memoryStream = FoundSections.Where(x => x.Name.Equals(DataItemFactory.sFMemoryStream)).First() as FMemoryStreamDataItem;
+        void FillVSTMixer()
+        {
+            FMemoryStreamDataItem memoryStream = GetSection(DataItemFactory.sFMemoryStream) as FMemoryStreamDataItem;
             ByteWalker bwMemoryStream = new ByteWalker(memoryStream.Data);
-            //memoryStream.AnotherSize = bwMemoryStream.GetInt();
-            //memoryStream.NumberOfSomething = bwMemoryStream.GetInt();
-            //memoryStream.DataOffsetInSection += 8;
             var rollingOffset = memoryStream.DataOffsetInFile;
+
             while (bwMemoryStream.CurrentIndex < memoryStream.Data.Length)
             {
-                //var msItemNameSize = bwMemoryStream.GetInt();
-
                 var msItemName = bwMemoryStream.GetStringBySize();
                 var msItemSize = bwMemoryStream.GetInt();
                 var offsetInSec = bwMemoryStream.CurrentIndex;
-                var offsetInF = rollingOffset; //4 + memoryStream.Name.Length + 1 + 2 + 4 + 4 + 4;
+                var offsetInF = rollingOffset;
                 var dataOffset = 4 + msItemName.Length + 1 + 4;
                 DataItem di = new DataItem(msItemName, bwMemoryStream.GetBytes(msItemSize), offsetInF, Data);
                 di.DataOffsetInSection = dataOffset;
@@ -110,8 +115,7 @@ namespace Parse
 
             DataItem vstMixer = memoryStream.SubSections.Where(x => x.Name.Equals("VST Mixer")).First();
             var bwVSTMixer = new ByteWalker(vstMixer.Data, vstMixer.DataOffsetInFile);
-            // Prefix
-            //bwVSTMixer.GetBytes(4 + 29 + (5 * 4) + 3);
+
             bwVSTMixer.CurrentIndex += (4 + 29 + (5 * 4) + 3);
 
             var stereoInStereoOutTotalOffset = 0;
@@ -202,8 +206,25 @@ namespace Parse
                     break;
             }
 
+        }
 
+        public DataItem GetSection(string SectionName)
+        {
+            return GetSection(SectionName, FoundSections);
+        }
+        public DataItem GetSection(string SectionName, List<DataItem> sections = null)
+        {           
+            foreach (var sec in sections)
+            {
+                if (sec.Name.Equals(SectionName))
+                    return sec;
 
+                var found = GetSection(SectionName, sec.SubSections);
+                if (found != null)
+                    return found;
+            }
+
+            return null;
         }
 
         public void FillEffects(DataItem Channel, ByteWalker bw)
