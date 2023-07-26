@@ -48,7 +48,9 @@
   <ItemGroup>
     <Compile Include="CPR2.cs" />
     <Compile Include="DataItems\DataItem.cs" />
+    <Compile Include="DataItems\DataItemARCH.cs" />
     <Compile Include="DataItems\DataItemFactory.cs" />
+    <Compile Include="DataItems\DataItemROOT.cs" />
     <Compile Include="DataItems\FMemoryStreamDataItem.cs" />
     <Compile Include="DataItems\MAudioTrackEventDataItem.cs" />
     <Compile Include="DataItems\MFolderTrackDataItem.cs" />

@@ -1,6 +1,7 @@
 ﻿using Parse.DataItems;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
@@ -22,6 +23,8 @@ namespace Parse
         public static byte[] Pad1 = ByteWalker.Pad1;
         public static byte[] Pad2 = ByteWalker.Pad2;
 
+        public static byte[] VSTSeparator = new byte[] { 0xAB, 0x19, 0xCD, 0x2B };
+
         public List<DataItem> FoundSections { get; set; } = new List<DataItem>();
 
         private byte[] bs2 = new byte[0];
@@ -32,8 +35,8 @@ namespace Parse
             Data = bytes;
             FillHeader();
             FillSections();
-            FillTracks();           
-            FillVSTMixer();           
+            FillTracks();
+            FillVSTMixer();
 
         }
 
@@ -53,8 +56,6 @@ namespace Parse
             {
                 bw.bLastOneSkipped = false;
 
-                //bs2 = bw.GetBytesUntil(false, Encoding.ASCII.GetBytes("ARCH"));
-
                 bs2 = bw.GetBytes(4); // ROOT
 
                 if (bw.CurrentIndex + 1 > bw.Length)
@@ -62,25 +63,25 @@ namespace Parse
 
                 var rootSize = bw.GetInt();
 
-                FoundSections.Add(new DataItem("ROOT", bw.GetBytes(rootSize), bw.CurrentIndex, Data));
+                FoundSections.Add(DataItemFactory.Create(DataItemFactory.sROOT, bw.GetBytes(rootSize), bw.CurrentIndex, Data));//new DataItem("ROOT", bw.GetBytes(rootSize), bw.CurrentIndex, Data));
                 bs2 = bw.GetBytes(4); // ARCH
                 var archSize = bw.GetInt();
-               
+
                 var nextROOToffset = archSize + bw.CurrentIndex;
-                var arch = new DataItem("ARCH", bw.PeekBytes(archSize), bw.CurrentIndex, Data);
+                var arch = DataItemFactory.Create(DataItemFactory.sARCH, bw.PeekBytes(archSize), bw.CurrentIndex, Data); //new DataItem("ARCH", bw.PeekBytes(archSize), bw.CurrentIndex, Data);
                 FoundSections.Add(arch);
 
                 while (bw.CurrentIndex < nextROOToffset)
                 {
                     var di = GetNextSection(bw, nextROOToffset);
                     if (di != null)
-                    {                        
+                    {
                         arch.SubSections.Add(di);
                     }
                     else
                         break;
                 }
-                
+
             }
         }
 
@@ -148,7 +149,7 @@ namespace Parse
             var stereoInStereoOutTotalOffset = 0;
 
             // Stereo In, Stereo Out
-            var distancesToNextString = new int[] { 0x26, 0x12A, 0x11C, 0x36 - 4 }; //0x22-4 };
+            var distancesToNextString = new int[] { 0x26, 0x12A, 0x11C, 0x36 - 4 };
             for (int i = 0; i < 2; i++)
             {
                 var abThing = bwVSTMixer.GetInt();
@@ -160,8 +161,6 @@ namespace Parse
                 var offsetInF = bwVSTMixer.CurrentIndex + vstMixer.OffsetInFile - 1;
                 DataItem di = new DataItem(vstItemName, bwVSTMixer.PeekBytes(vstSize), offsetInF, Data);
                 di.SectionSize = vstSize;
-
-                // var distancesToNextString = new int[] { 0x26, 0x12A, 0x11C, 0x36-4 }; //0x22-4 };
 
                 for (int z = 0; z < distancesToNextString.Length - 1; z++)
                 {
@@ -181,12 +180,14 @@ namespace Parse
             }
 
             stereoInStereoOutTotalOffset = vstMixer.SubSections.Last().OffsetInFile + vstMixer.SubSections.Last().SectionSize + 0x13;
-            bwVSTMixer.GetBytesUntil(true, new byte[] { 0xAB, 0x19, 0xCD, 0x2B });
-            if (!bwVSTMixer.PeekBytes(4).SequenceEqual(new byte[] { 0xAB, 0x19, 0xCD, 0x2B }))
+            
+            bwVSTMixer.GetBytesUntil(true, VSTSeparator);
+
+            if (!bwVSTMixer.PeekBytes(4).SequenceEqual(VSTSeparator))
                 return;
 
             // All Vsts Prefix
-            var abThing2 = bwVSTMixer.GetInt();         // AB 19 CD 2B
+            var abThing2 = bwVSTMixer.GetInt();         // AB 19 CD 2B (VSTSeparator)
             var oneThing2 = bwVSTMixer.GetInt();        // 00 00 00 01 
             var allVstSize = bwVSTMixer.GetInt();
             var vstPrefix = bwVSTMixer.GetBytes(4 + 4 + 4 + 4); // 12        // 00 00 00 00 00 00 00 06 00 00 00 40 00 00 00 02                                             00 00 00 02
@@ -235,12 +236,37 @@ namespace Parse
 
         }
 
+
+        public void Save(string pFileName)
+        {
+            List<byte> toSave = new List<byte>();
+            toSave.AddRange(Header);
+            foreach (var s in FoundSections)
+            {
+                //toSave.AddRange(Encoding.ASCII.GetBytes(s.Name));
+                //toSave.AddRange(BitConverter.GetBytes(s.Data.Length).Reverse());
+                //toSave.AddRange(s.Data);
+                toSave.AddRange(s.GetBytes());               
+            }
+
+            // Total size
+            var tSize = BitConverter.GetBytes(toSave.Count() - 12).Reverse().ToArray();
+            toSave[4] = tSize[0];
+            toSave[5] = tSize[1];
+            toSave[6] = tSize[2];
+            toSave[7] = tSize[3];
+
+            File.WriteAllBytes(pFileName, toSave.ToArray());
+        }
+
+
         public DataItem GetSection(string SectionName)
         {
             return GetSection(SectionName, FoundSections);
         }
+
         public DataItem GetSection(string SectionName, List<DataItem> sections = null)
-        {           
+        {
             foreach (var sec in sections)
             {
                 if (sec.Name.Equals(SectionName))
@@ -386,10 +412,8 @@ namespace Parse
                 }
 
                 if (Sections[sectionName].Skip)
-                {
-                    //bw.CurrentIndex += sectionSize;
-                    bw.bLastOneSkipped = true;
-                    //var howManySkipped = bw.EatZeros();
+                {                    
+                    bw.bLastOneSkipped = true;                 
                 }
 
                 if (Sections[sectionName].AddToSize > 0)
@@ -414,7 +438,7 @@ namespace Parse
 
         }
 
-        
+
 
         public static Dictionary<string, SectionProperties> Sections = new Dictionary<string, SectionProperties>()
         {
@@ -451,8 +475,6 @@ namespace Parse
             { "PArrangeSetup", new SectionProperties() { HasSize = true, Skip=true, ShouldEatZeroz=true} },
             { "MTrack", new SectionProperties() { HasSize = true, Skip=false, ShouldEatZeroz=true} },
             { "MFolderTrack", new SectionProperties() { HasSize = true, Skip=true } },
-
-
 
         };
     }

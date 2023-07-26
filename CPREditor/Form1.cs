@@ -27,6 +27,7 @@ namespace CPREditor
         WpfHexaEditor.HexEditor he = new WpfHexaEditor.HexEditor();
         System.Windows.Forms.ContextMenu tvCM = new ContextMenu();
         string RightClickedNode = "";
+        CPR2 current = null;
 
         public Form1()
         {
@@ -64,13 +65,13 @@ namespace CPREditor
             trvSections.Nodes.Clear();
             lstTracks.Items.Clear();
 
-            CPR2 cpr2 = new CPR2();
-            cpr2.Parse(File.ReadAllBytes(SelectedFileName));
+            current = new CPR2();
+            current.Parse(File.ReadAllBytes(SelectedFileName));
 
             dataGridView1.DataSource = null;
             dataGridView1.AutoGenerateColumns = true;
 
-            var vstMixer = cpr2.GetSection(DataItemFactory.sVSTMixer); 
+            var vstMixer = current.GetSection(DataItemFactory.sVSTMixer); 
 
             var mixer = DataItem.ToDataTable(vstMixer.SubSections);
             mixer.Columns["Stereo Out"].SetOrdinal(mixer.Columns.Count - 1);           
@@ -79,16 +80,18 @@ namespace CPREditor
 
             treeView1.ShowRootLines = trvSections.ShowRootLines = true;
 
-            PopulateTreeview(trvSections, cpr2.FoundSections);
+            PopulateTreeview(trvSections, current.FoundSections);
 
-            var trackList = cpr2.GetSection(DataItemFactory.sMTrackList);
+            var trackList = current.GetSection(DataItemFactory.sMTrackList);
             if (trackList != null)
             {
                 foreach (var t in trackList.SubSections)
                 {
                     lstTracks.Items.Add(t.ToString());
                 }
-            }            
+            }
+
+            toolStripMenuItem1.Enabled = true;
         }
 
 
@@ -182,6 +185,19 @@ namespace CPREditor
         private void Exit_Click(object sender, EventArgs e)
         {
             Application.Exit();
+        }
+
+        private void toolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            if (current != null)
+            {
+                SaveFileDialog sfd = new SaveFileDialog();
+                var res = sfd.ShowDialog(); 
+                if (res == DialogResult.OK)
+                {
+                    current.Save(sfd.FileName);
+                }
+            }
         }
     }
 }

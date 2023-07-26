@@ -35,6 +35,50 @@ namespace Parse
             return $"{Name} [0x{OffsetInFile.ToString("x4")}] (0x{SectionSize.ToString("x4")})";
         }
 
+        public virtual byte[] GetHeader()
+        {
+            List<byte> toReturn = new List<byte>();
+            var isRootArch = Name == "ROOT" || Name == "ARCH";
+            if (!isRootArch)
+            {
+                toReturn.AddRange(BitConverter.GetBytes(Name.Length).Reverse());
+            }
+            toReturn.AddRange(Encoding.ASCII.GetBytes(this.Name));
+
+            if (Data != null)
+            {
+                toReturn.AddRange(BitConverter.GetBytes(this.Data.Length).Reverse());
+            }
+            else
+            {
+                if (Name != "ROOT")
+                    toReturn.AddRange(new List<byte>() { 0x0, 0x0 }.Union(ByteWalker.Pad1));
+            }
+            return toReturn.ToArray();
+        }
+
+        public virtual byte[] GetBytes()
+        {
+            var toReturn = new List<byte>();
+            toReturn.AddRange(GetHeader());
+
+            if (this.SubSections.Count > 0)
+            {
+                foreach (var sub in this.SubSections)
+                {
+                    List<byte> sec = new List<byte>();
+                    sec.AddRange(sub.GetBytes());
+                }
+            }
+            else
+            {
+                toReturn.AddRange(this.Data);
+            }
+
+            return toReturn.ToArray();
+
+        }
+
         public string DataStr
         {
             get
