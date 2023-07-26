@@ -122,48 +122,7 @@ namespace Parse
             return toReturn.ToArray();
         }
 
-
-        public static int Search(byte[] haystack, byte[] needle)
-        {
-            if (needle.Length == 0)
-                return 0;  // Immediate match
-
-            // Build table of shift amounts
-            int[] shifts = new int[needle.Length + 1];
-            int shift = 1;
-            for (int pos = 0; pos < needle.Length; pos++)
-            {
-                while (shift <= pos && needle[pos] != needle[pos - shift])
-                    shift += shifts[pos - shift];
-                shifts[pos + 1] = shift;
-            }
-
-            // Actual search
-            int haystackPosition = 0;
-            int needlePosition = 0;
-            while (haystackPosition < haystack.Length)
-            {
-                if (needle[needlePosition] == haystack[haystackPosition])
-                {
-                    needlePosition++;
-                    haystackPosition++;
-                    if (needlePosition == needle.Length)
-                        return haystackPosition - needle.Length;  // Match found
-                }
-                else if (needlePosition == 0)
-                {
-                    haystackPosition++;
-                }
-                else
-                {
-                    needlePosition = shifts[needlePosition];  // Move by computed shift
-                }
-            }
-
-            return -1;  // No match found
-        }
-
-
+     
         public byte[] PeekBytes(int length)
         {
             return _data.Skip(CurrentIndex).Take(length).ToArray();
