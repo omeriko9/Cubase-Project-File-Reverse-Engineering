@@ -8,7 +8,7 @@ namespace Parse.DataItems
 {
     public class DataItemARCH : DataItem
     {
-        public DataItemARCH(string name, byte[] data, int offsetInFile, byte[] entireData) : base(name, data, offsetInFile, entireData)
+        public DataItemARCH(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
 
         }

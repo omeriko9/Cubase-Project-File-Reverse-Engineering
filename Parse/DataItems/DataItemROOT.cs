@@ -8,7 +8,7 @@ namespace Parse.DataItems
 {
     public class DataItemROOT : DataItem
     {
-        public DataItemROOT(string name, byte[] data, int offsetInFile, byte[] entireData) : base(name, data, offsetInFile, entireData)
+        public DataItemROOT(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
 
         }

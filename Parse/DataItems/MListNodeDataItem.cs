@@ -21,8 +21,8 @@ namespace Parse.DataItems
             FF FF FF FF (delimiter?)
          */
 
-        public MListNodeDataItem(string name, byte[] data, int offsetInFile, byte[] entireData)
-            : base(name, data, offsetInFile, entireData)
+        public MListNodeDataItem(string name, byte[] data, int offsetInFile)
+            : base(name, data, offsetInFile)
         {
             //var bw = new ByteWalker(Data);
 

@@ -12,7 +12,7 @@ namespace Parse.DataItems
 
         public int AnotherSize { get; set; }
         public int NumberOfSomething { get; set; }
-        public FMemoryStreamDataItem(string name, byte[] pdata, int offsetInFile, byte[] entireData) : base(name, pdata, offsetInFile, entireData)
+        public FMemoryStreamDataItem(string name, byte[] pdata, int offsetInFile) : base(name, pdata, offsetInFile)
         {
             ByteWalker bw = new ByteWalker(Data);
             this.AnotherSize = bw.GetInt();

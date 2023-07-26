@@ -13,7 +13,7 @@ namespace Parse.DataItems
 
         public int MListNodeSize { get; set; }
 
-        public MMidiTrackEventDataItem(string name, byte[] data, int offsetInFile, byte[] entireData) : base(name, data, offsetInFile, entireData)
+        public MMidiTrackEventDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
             //var bw = new ByteWalker(data);
             ////bw.GetBytes(3);
@@ -37,7 +37,7 @@ namespace Parse.DataItems
 
     public class MListNode : DataItem
     {
-        public MListNode(string name, byte[] data, int offsetInFile, byte[] entire) : base(name, data, offsetInFile, entire)
+        public MListNode(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
         }
     }

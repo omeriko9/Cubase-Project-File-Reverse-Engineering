@@ -14,17 +14,11 @@ namespace Parse
         public string Name { get; set; }
         public byte[] Data { get; set; } = new byte[0];
 
-        public byte[] EntireData { get; set; }
-
         public int SectionSize { get; set; }
-
-        public int NextSectionOffset { get; set; }
 
         public int DataOffsetInSection { get; set; }
 
         public int DataOffsetInFile { get { return DataOffsetInSection + OffsetInFile; } }
-
-        public int HeaderEndOffset { get; set; }
 
         public int Nick { get; set; }
 
@@ -93,11 +87,10 @@ namespace Parse
 
         public int OffsetInSection { get; set; }
 
-        public DataItem(string name, byte[] data, int offsetInFile, byte[] entireData)
+        public DataItem(string name, byte[] data, int offsetInFile)
         {
             Name = name;
-            Data = data;
-            EntireData = entireData;
+            Data = data;           
             OffsetInFile = offsetInFile;
         }
 
@@ -138,8 +131,7 @@ namespace Parse
 
             if (bw.PeekIsDelimiter())
             {
-                var t = DataItemFactory.Create(DataItemName, new byte[0], pCurrentIndex, _data);
-                t.HeaderEndOffset = bw.CurrentIndex + 4;
+                var t = DataItemFactory.Create(DataItemName, new byte[0], pCurrentIndex);               
                 return t;
             }
 
@@ -147,9 +139,8 @@ namespace Parse
             var iNextSectionOffset = bw.CurrentIndex;
             var DataItemData = bw.GetBytes(DataItemSize);
 
-            var toReturn = DataItemFactory.Create(DataItemName, DataItemData, pCurrentIndex, _data);
-            toReturn.SectionSize = DataItemSize;
-            toReturn.NextSectionOffset = iNextSectionOffset + DataItemSize;
+            var toReturn = DataItemFactory.Create(DataItemName, DataItemData, pCurrentIndex);
+            toReturn.SectionSize = DataItemSize;           
 
             return toReturn;
 

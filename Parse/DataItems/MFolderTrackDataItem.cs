@@ -8,7 +8,7 @@ namespace Parse.DataItems
 {
     public class MFolderTrackDataItem : DataItem
     {
-        public MFolderTrackDataItem(string name, byte[] data, int offsetInFile, byte[] entireData) : base(name, data, offsetInFile, entireData)
+        public MFolderTrackDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
             ByteWalker bw = new ByteWalker(data);
 

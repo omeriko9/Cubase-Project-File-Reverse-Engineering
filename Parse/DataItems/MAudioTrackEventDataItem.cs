@@ -10,7 +10,7 @@ namespace Parse.DataItems
     {
         public string AudioTrackName { get; set; }
 
-        public MAudioTrackEventDataItem(string name, byte[] data, int offsetInFile, byte[] entireData) : base(name, data, offsetInFile, entireData)
+        public MAudioTrackEventDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
             //var bw = new ByteWalker(data);
             

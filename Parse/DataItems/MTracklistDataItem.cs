@@ -8,7 +8,7 @@ namespace Parse.DataItems
     {
         public string UntitledString { get; set; }
         public int NumberOfTracks { get; set; }
-        public MTracklistDataItem(string name, byte[] data, int offsetInFile, byte[] entireData) : base(name, data, offsetInFile, entireData)
+        public MTracklistDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
 
             //ByteWalker bw = new ByteWalker(Data);           

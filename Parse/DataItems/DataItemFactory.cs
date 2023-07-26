@@ -18,18 +18,18 @@ namespace Parse.DataItems
         public const string sMMidiTrackEvent = "MMidiTrackEvent";
 
 
-        public static DataItem Create(string name, byte[] data, int offsetInFile, byte[] entireData)
+        public static DataItem Create(string name, byte[] data, int offsetInFile)
         {
             switch (name)
             {
-                case sMListNode: return new MListNodeDataItem(name, data, offsetInFile, entireData);
-                case sMMidiTrackEvent: return new MMidiTrackEventDataItem(name, data, offsetInFile, entireData);
-                case sMTrackList: return new MTracklistDataItem(name, data, offsetInFile, entireData);
-                case sMAudioTrackEvent: return new MAudioTrackEventDataItem(name, data, offsetInFile, entireData);
-                case sROOT: return new DataItemROOT(name, data, offsetInFile, entireData);
-                case sARCH: return new DataItemARCH(name, data, offsetInFile, entireData);
-                case sFMemoryStream: return new FMemoryStreamDataItem(name, data, offsetInFile, entireData);
-                default: return new DataItem(name, data, offsetInFile, entireData);
+                case sMListNode: return new MListNodeDataItem(name, data, offsetInFile);
+                case sMMidiTrackEvent: return new MMidiTrackEventDataItem(name, data, offsetInFile);
+                case sMTrackList: return new MTracklistDataItem(name, data, offsetInFile);
+                case sMAudioTrackEvent: return new MAudioTrackEventDataItem(name, data, offsetInFile);
+                case sROOT: return new DataItemROOT(name, data, offsetInFile);
+                case sARCH: return new DataItemARCH(name, data, offsetInFile);
+                case sFMemoryStream: return new FMemoryStreamDataItem(name, data, offsetInFile);
+                default: return new DataItem(name, data, offsetInFile);
             }
         }
 

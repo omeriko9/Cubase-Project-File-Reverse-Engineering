@@ -63,12 +63,12 @@ namespace Parse
 
                 var rootSize = bw.GetInt();
 
-                FoundSections.Add(DataItemFactory.Create(DataItemFactory.sROOT, bw.GetBytes(rootSize), bw.CurrentIndex, Data));//new DataItem("ROOT", bw.GetBytes(rootSize), bw.CurrentIndex, Data));
+                FoundSections.Add(DataItemFactory.Create(DataItemFactory.sROOT, bw.GetBytes(rootSize), bw.CurrentIndex));
                 bs2 = bw.GetBytes(4); // ARCH
                 var archSize = bw.GetInt();
 
                 var nextROOToffset = archSize + bw.CurrentIndex;
-                var arch = DataItemFactory.Create(DataItemFactory.sARCH, bw.PeekBytes(archSize), bw.CurrentIndex, Data); //new DataItem("ARCH", bw.PeekBytes(archSize), bw.CurrentIndex, Data);
+                var arch = DataItemFactory.Create(DataItemFactory.sARCH, bw.PeekBytes(archSize), bw.CurrentIndex); 
                 FoundSections.Add(arch);
 
                 while (bw.CurrentIndex < nextROOToffset)
@@ -133,7 +133,7 @@ namespace Parse
                 var offsetInSec = bwMemoryStream.CurrentIndex;
                 var offsetInF = rollingOffset;
                 var dataOffset = 4 + msItemName.Length + 1 + 4;
-                DataItem di = new DataItem(msItemName, bwMemoryStream.GetBytes(msItemSize), offsetInF, Data);
+                DataItem di = DataItemFactory.Create(msItemName, bwMemoryStream.GetBytes(msItemSize), offsetInF);
                 di.DataOffsetInSection = dataOffset;
 
                 di.SectionSize = msItemSize;
@@ -159,7 +159,7 @@ namespace Parse
                 var four = bwVSTMixer.GetInt();
                 var vstSize = bwVSTMixer.GetInt();
                 var offsetInF = bwVSTMixer.CurrentIndex + vstMixer.OffsetInFile - 1;
-                DataItem di = new DataItem(vstItemName, bwVSTMixer.PeekBytes(vstSize), offsetInF, Data);
+                DataItem di = DataItemFactory.Create(vstItemName, bwVSTMixer.PeekBytes(vstSize), offsetInF);
                 di.SectionSize = vstSize;
 
                 for (int z = 0; z < distancesToNextString.Length - 1; z++)
@@ -211,7 +211,7 @@ namespace Parse
                 var InsAudioChannelName = bwVSTMixer.GetString(bwVSTMixer.GetInt());
                 bs2 = bwVSTMixer.GetBytes((16 * 4) + 2 - 10);
 
-                DataItem VSTChannel = new DataItem(InsDeviceName, new byte[] { }, 0, Data);
+                DataItem VSTChannel = DataItemFactory.Create(InsDeviceName, new byte[] { }, 0);
                 VSTChannel.SectionSize = sizeTillProlog;
 
                 FillEffects(VSTChannel, bwVSTMixer);
@@ -302,7 +302,7 @@ namespace Parse
             if (NextEffectTotalSize < 0x10)
             {
                 bs2 = bwVSTMixer.GetBytes(NextEffectTotalSize - 2);
-                DataItem emptySlot = new DataItem("{Empty}", new byte[] { }, 0, Data);
+                DataItem emptySlot = DataItemFactory.Create("{Empty}", new byte[] { }, 0);
                 //VSTChannel.SubSections.Add(emptySlot);
                 return emptySlot;// continue;
             }
@@ -337,7 +337,7 @@ namespace Parse
             var strbs = bwVSTMixer.GetStringBySize();
 
 
-            DataItem effect = new DataItem(strbs, new byte[] { }, 0, Data);
+            DataItem effect = DataItemFactory.Create(strbs, new byte[] { }, 0);
             return effect;
         }
 
@@ -429,7 +429,7 @@ namespace Parse
                 sectionData = bw.GetBytesUntil(true, Pad1, Pad2);
             }
 
-            var toReturn = DataItemFactory.Create(sectionName, sectionData, offsetInFile, Data);
+            var toReturn = DataItemFactory.Create(sectionName, sectionData, offsetInFile);
             toReturn.Nick = nick;
             toReturn.SectionSize = bw.CurrentIndex - offsetInFile;
             toReturn.DataOffsetInSection += indexBeforeData - offsetInFile;
