@@ -8,14 +8,17 @@ namespace Parse
 {
     public class ByteWalker
     {
-        public byte[] _data = null;
+        private byte[] _data = null;
+
         public int CurrentIndex = 0;
         public int OriginalOffsetInFile = 0;
 
         public static byte[] Pad1 = new byte[4] { 0xFF, 0xFF, 0xFF, 0xFE };
         public static byte[] Pad2 = new byte[4] { 0xFF, 0xFF, 0xFF, 0xFF };
+       
         public bool bLastOneSkipped { get; set; } = false;
         public int TotalSize { get { return _data.Length; } }
+
         public ByteWalker(byte[] data)
         {
             _data = data;
