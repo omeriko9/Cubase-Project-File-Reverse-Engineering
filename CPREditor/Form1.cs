@@ -41,8 +41,6 @@ namespace CPREditor
 
             tvCM.MenuItems.Add("Copy", (x, y) => { Clipboard.SetText(RightClickedNode); });
 
-            //panel1.Controls.Add(bv);
-            //panel1.Controls.Add(he);
         }
 
         private void button1_Click(object sender, EventArgs e)
