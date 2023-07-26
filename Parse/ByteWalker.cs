@@ -141,14 +141,5 @@ namespace Parse
             return toReturn.TrimEnd('\0');
         }
 
-        public string GetLString()
-        {
-            var size = GetInt();
-            var toReturn = GetString(size);
-            CurrentIndex += size;
-            return toReturn;
-        }
-
-
     }
 }
