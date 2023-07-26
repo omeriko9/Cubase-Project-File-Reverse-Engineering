@@ -35,17 +35,11 @@ namespace Parse
             while (cur[iCur] == 0x0)
                 iCur++;
 
-            //var noLeadingZeros = cur.TrimLeadingZeros(CurrentIndex);
-            CurrentIndex += iCur; //cur.Length - noLeadingZeros.Length;
-            return iCur; //cur.Length - noLeadingZeros.Length;
+           
+            CurrentIndex += iCur; 
+            return iCur; 
         }
 
-        public uint GetUInt()
-        {
-            var toReturn = _data.GetUInt(CurrentIndex);
-            CurrentIndex += 4;
-            return toReturn;
-        }
 
         public int GetInt()
         {
@@ -57,18 +51,6 @@ namespace Parse
         public bool PeekIsDelimiter()
         {
             return PeekBytes(4).SequenceEqual(Pad1) || PeekBytes(4).SequenceEqual(Pad2);
-        }
-
-        public byte[] GetInts(int howMany)
-        {
-            List<byte> toReturn = new List<byte>();
-
-            for (int i = 0; i < howMany; i++)
-            {
-                toReturn.AddRange(BitConverter.GetBytes(GetInt()));
-            }
-
-            return toReturn.ToArray();
         }
 
         public int PeekInt()
