@@ -68,12 +68,14 @@ namespace Parse
                 var archSize = bw.GetInt();
 
                 var nextROOToffset = archSize + bw.CurrentIndex;
-                var arch = DataItemFactory.Create(DataItemFactory.sARCH, bw.PeekBytes(archSize), bw.CurrentIndex); 
+                var arch = DataItemFactory.Create(DataItemFactory.sARCH, bw.PeekBytes(archSize), bw.CurrentIndex);
                 FoundSections.Add(arch);
+
+                DataItem LastDataItem = arch;
 
                 while (bw.CurrentIndex < nextROOToffset)
                 {
-                    var di = GetNextSection(bw, nextROOToffset);
+                    var di = LastDataItem = GetNextSection(bw, nextROOToffset, LastDataItem);
                     if (di != null)
                     {
                         arch.SubSections.Add(di);
@@ -88,14 +90,15 @@ namespace Parse
         void FillTracks()
         {
             // MTrackList
-            MTracklistDataItem trackList = GetSection(DataItemFactory.sMTrackList) as MTracklistDataItem;
-            ByteWalker bwTrackList = new ByteWalker(trackList.Data);
+            var trackList = GetSection(DataItemFactory.sMTrackList) as MTrackListDataItem;
+            var bwTrackList = new ByteWalker(trackList.Data);
             trackList.UntitledString = bwTrackList.GetStringBySize();
 
+            DataItem LastDataItem = null;
             // Get Tracks
             while (bwTrackList.Length - bwTrackList.CurrentIndex - 0x1f > 0)
             {
-                var track = GetNextSection(bwTrackList, bwTrackList.Length);
+                var track = LastDataItem = GetNextSection(bwTrackList, bwTrackList.Length, LastDataItem);
                 track.OffsetInSection = track.OffsetInFile;
                 track.OffsetInFile = track.OffsetInSection + trackList.OffsetInFile + 4 + trackList.Name.Length + 1 + 2 + 4;
 
@@ -104,7 +107,7 @@ namespace Parse
                     var bwnode = new ByteWalker(track.Data);
                     bwnode.bLastOneSkipped = true;
                     bwnode.CurrentIndex += 26;
-                    var node = GetNextSection(bwnode, track.SectionSize);
+                    var node = LastDataItem = GetNextSection(bwnode, track.SectionSize, LastDataItem);
                     var bwname = new ByteWalker(node.Data);
                     bwname.CurrentIndex += 4;
                     if (track is MAudioTrackEventDataItem)
@@ -124,7 +127,8 @@ namespace Parse
         {
             FMemoryStreamDataItem memoryStream = GetSection(DataItemFactory.sFMemoryStream) as FMemoryStreamDataItem;
             ByteWalker bwMemoryStream = new ByteWalker(memoryStream.Data);
-            var rollingOffset = memoryStream.DataOffsetInFile;
+            var rollingOffset = memoryStream.DataOffsetInFile+8;
+            bwMemoryStream.GetBytes(8);
 
             while (bwMemoryStream.CurrentIndex < memoryStream.Data.Length)
             {
@@ -180,7 +184,7 @@ namespace Parse
             }
 
             stereoInStereoOutTotalOffset = vstMixer.SubSections.Last().OffsetInFile + vstMixer.SubSections.Last().SectionSize + 0x13;
-            
+
             bwVSTMixer.GetBytesUntil(true, VSTSeparator);
 
             if (!bwVSTMixer.PeekBytes(4).SequenceEqual(VSTSeparator))
@@ -246,7 +250,7 @@ namespace Parse
                 //toSave.AddRange(Encoding.ASCII.GetBytes(s.Name));
                 //toSave.AddRange(BitConverter.GetBytes(s.Data.Length).Reverse());
                 //toSave.AddRange(s.Data);
-                toSave.AddRange(s.GetBytes());               
+                toSave.AddRange(s.GetBytes());
             }
 
             // Total size
@@ -341,7 +345,7 @@ namespace Parse
             return effect;
         }
 
-        public DataItem GetNextSection(ByteWalker bw, int maxOffset)
+        public DataItem GetNextSection(ByteWalker bw, int maxOffset, DataItem LastDataItem = null)
         {
             // OK let's do this
             // 
@@ -362,6 +366,8 @@ namespace Parse
                 var res = bw.GetBytesUntilDoNotExceed(false, maxOffset, Pad1, Pad2);
                 if (res == null)
                     return null;
+                if (LastDataItem != null)
+                    LastDataItem.Suffix = res;
             }
             else
                 bw.bLastOneSkipped = false;
@@ -378,6 +384,7 @@ namespace Parse
             }
 
             var sectionName = "";
+            byte[] sectionPostName = null;
             var sectionNameSize = 0;
             int nick = 0;
 
@@ -390,39 +397,51 @@ namespace Parse
             {
                 sectionNameSize = test;
                 sectionName = bw.GetString(sectionNameSize);
-                bw.GetBytes(2);
+                var twoB = 2;
+
+                if (Sections.ContainsKey(sectionName))
+                    twoB = Sections[sectionName].TwoBytesLength;
+
+                sectionPostName = bw.GetBytes(twoB);
             }
+
 
             var indexBeforeData = bw.CurrentIndex;
             byte[] sectionData = null;
-
+            byte[] suffixCurrent = null;
 
             if (Sections.ContainsKey(sectionName))
             {
-                if (Sections[sectionName].HasSize)
+                var secMeta = Sections[sectionName];
+
+                if (secMeta.HasSize)
                 {
 
                     var sectionSize = bw.GetInt();
                     indexBeforeData += 4;
                     sectionData = bw.GetBytes(sectionSize);
                 }
-                else if (Sections[sectionName].FixedSize > 0)
+                else if (secMeta.FixedSize > 0)
                 {
-                    sectionData = bw.GetBytes(Sections[sectionName].FixedSize);
+                    sectionData = bw.GetBytes(secMeta.FixedSize);
                 }
 
-                if (Sections[sectionName].Skip)
-                {                    
-                    bw.bLastOneSkipped = true;                 
-                }
-
-                if (Sections[sectionName].AddToSize > 0)
+                if (secMeta.Skip)
                 {
-                    bw.CurrentIndex += Sections[sectionName].AddToSize;
+                    bw.bLastOneSkipped = true;
                 }
 
-                if (Sections[sectionName].ShouldEatZeroz)
-                    bw.EatZeros();
+                if (secMeta.AddToSize > 0)
+                {
+                    //bw.CurrentIndex += secMeta.AddToSize;
+                    suffixCurrent = bw.GetBytes(secMeta.AddToSize);
+                }
+
+                if (secMeta.ShouldEatZeroz)
+                {
+                    var howManyZeros = bw.EatZeros();
+                    suffixCurrent = Enumerable.Repeat((byte)0x0, howManyZeros).ToArray();
+                }
             }
             else
             {
@@ -433,6 +452,10 @@ namespace Parse
             toReturn.Nick = nick;
             toReturn.SectionSize = bw.CurrentIndex - offsetInFile;
             toReturn.DataOffsetInSection += indexBeforeData - offsetInFile;
+            toReturn.PostName = sectionPostName;
+
+            if (suffixCurrent != null)
+                toReturn.Suffix = suffixCurrent;
 
             return toReturn;
 
@@ -475,6 +498,9 @@ namespace Parse
             { "PArrangeSetup", new SectionProperties() { HasSize = true, Skip=true, ShouldEatZeroz=true} },
             { "MTrack", new SectionProperties() { HasSize = true, Skip=false, ShouldEatZeroz=true} },
             { "MFolderTrack", new SectionProperties() { HasSize = true, Skip=true } },
+//            { "PArrangement", new SectionProperties() { HasSize = true, Skip=true } },
+            { "PAMD", new SectionProperties() { TwoBytesLength = 1, HasSize = false } },
+            //{ "PDrumMap", new SectionProperties() { HasSize = true, Skip=true } },
 
         };
     }
@@ -492,6 +518,8 @@ namespace Parse
         public int AddToSize { get; set; } = 0;
 
         public bool ShouldEatZeroz { get; set; } = false;
+
+        public int TwoBytesLength { get; set; } = 2;
 
     }
 }

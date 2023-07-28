@@ -4,6 +4,7 @@ using Parse.DataItems;
 using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.ConstrainedExecution;
 
 namespace ParseTests
 {
@@ -11,13 +12,29 @@ namespace ParseTests
     public class UnitTest1
     {
         [TestMethod]
-        public void TestMethod1()
+        public void TestLoad()
         {
             CPR2 cpr = new CPR2();
             cpr.Parse(File.ReadAllBytes(@"Data\chill-01.cpr"));
 
-            var smixer = cpr.GetSection(DataItemFactory.sVSTMixer); 
-            
+            MakeSureChannel(cpr);
+        }
+
+        [TestMethod]
+        public void TestSave()
+        {
+            CPR2 cpr = new CPR2();
+            cpr.Parse(File.ReadAllBytes(@"Data\chill-01.cpr"));
+            cpr.Save("tmp.sav");
+            CPR2 cpr2 = new CPR2();
+            cpr2.Parse(File.ReadAllBytes("tmp.sav"));
+            MakeSureChannel(cpr2);
+        }
+
+        public void MakeSureChannel(CPR2 cpr)
+        {
+            var smixer = cpr.GetSection(DataItemFactory.sVSTMixer);
+
             var table = DataItem.ToDataTable(smixer.SubSections);
             Assert.IsTrue(table.Rows[3].ItemArray[6].ToString() == "Native Reverb Plus");
         }

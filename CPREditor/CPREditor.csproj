@@ -36,7 +36,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>Icon2.ico</ApplicationIcon>
+    <ApplicationIcon>icon4.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Costura, Version=5.7.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -214,6 +214,7 @@
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
     </Compile>
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
@@ -243,6 +244,8 @@
   <ItemGroup>
     <Content Include="Icon.ico" />
     <Content Include="Icon2.ico" />
+    <Content Include="Icon3.ico" />
+    <Content Include="icon4.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\Fody.6.5.5\build\Fody.targets" Condition="Exists('..\packages\Fody.6.5.5\build\Fody.targets')" />

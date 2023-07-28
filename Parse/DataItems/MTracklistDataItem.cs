@@ -4,11 +4,11 @@ using System.Linq;
 
 namespace Parse.DataItems
 {
-    internal class MTracklistDataItem : DataItem
+    internal class MTrackListDataItem : DataItem
     {
         public string UntitledString { get; set; }
         public int NumberOfTracks { get; set; }
-        public MTracklistDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
+        public MTrackListDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
 
             //ByteWalker bw = new ByteWalker(Data);           

@@ -47,16 +47,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CPR2.cs" />
+    <Compile Include="DataItems\CmObjectDataItem.cs" />
     <Compile Include="DataItems\DataItem.cs" />
     <Compile Include="DataItems\DataItemARCH.cs" />
     <Compile Include="DataItems\DataItemFactory.cs" />
     <Compile Include="DataItems\DataItemROOT.cs" />
-    <Compile Include="DataItems\FMemoryStreamDataItem.cs" />
     <Compile Include="DataItems\MAudioTrackEventDataItem.cs" />
-    <Compile Include="DataItems\MFolderTrackDataItem.cs" />
     <Compile Include="DataItems\MMidiTrackEventDataItem.cs" />
-    <Compile Include="DataItems\MTrackEventDataItem.cs" />
-    <Compile Include="DataItems\MTracklistDataItem.cs" />
+    <Compile Include="DataItems\MTrackListDataItem.cs" />
+    <Compile Include="DataItems\ManyDataItems.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="ByteWalker.cs" />
     <Compile Include="Program.cs" />

@@ -14,6 +14,10 @@ namespace Parse
         public string Name { get; set; }
         public byte[] Data { get; set; } = new byte[0];
 
+        public bool IsContainer { get; set; } = false;
+
+        public bool AddDelimiterEvenNotContainer { get; set; } = false;
+        public byte[] Suffix { get; set; } = new byte[0];   
         public int SectionSize { get; set; }
 
         public int DataOffsetInSection { get; set; }
@@ -21,6 +25,8 @@ namespace Parse
         public int DataOffsetInFile { get { return DataOffsetInSection + OffsetInFile; } }
 
         public int Nick { get; set; }
+
+        //public byte[] EndDelimiter = ByteWalker.Pad1;
 
         public List<DataItem> SubSections { get; set; } = new List<DataItem>();
 
@@ -32,23 +38,22 @@ namespace Parse
         public virtual byte[] GetHeader()
         {
             List<byte> toReturn = new List<byte>();
-            var isRootArch = Name == "ROOT" || Name == "ARCH";
-            if (!isRootArch)
-            {
-                toReturn.AddRange(BitConverter.GetBytes(Name.Length).Reverse());
-            }
-            toReturn.AddRange(Encoding.ASCII.GetBytes(this.Name));
 
-            if (Data != null)
-            {
-                toReturn.AddRange(BitConverter.GetBytes(this.Data.Length).Reverse());
-            }
-            else
-            {
-                if (Name != "ROOT")
-                    toReturn.AddRange(new List<byte>() { 0x0, 0x0 }.Union(ByteWalker.Pad1));
-            }
+            toReturn.AddRange(GetStringSizeBigEndian(Name));
+            toReturn.AddRange(StringToBytes(Name));
+            toReturn.AddRange(ToBigEndian(Data.Length));          
+
             return toReturn.ToArray();
+        }
+
+        public byte[] GetStringSizeBigEndian(string toGet)
+        {
+            return BitConverter.GetBytes(toGet.Length + 1).Reverse().ToArray();
+        }
+
+        public byte[] ToBigEndian(int i)
+        {
+            return BitConverter.GetBytes(i).Reverse()  .ToArray();
         }
 
         public virtual byte[] GetBytes()
@@ -73,6 +78,13 @@ namespace Parse
 
         }
 
+        public byte[] StringToBytes(string str)
+        {
+            var tr = new List<byte>(Encoding.ASCII.GetBytes(str));
+            tr.Add(0x0);
+            return tr.ToArray();
+        }
+
         public string DataStr
         {
             get
@@ -84,6 +96,8 @@ namespace Parse
         }
 
         public int OffsetInFile { get; set; }
+
+        public byte[] PostName { get; set; }
 
         public int OffsetInSection { get; set; }
 

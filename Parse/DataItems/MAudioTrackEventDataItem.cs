@@ -12,19 +12,7 @@ namespace Parse.DataItems
 
         public MAudioTrackEventDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
-            //var bw = new ByteWalker(data);
-            
-            //bw.GetBytes(0x1A);
-            
-            //if (bw.CurrentIndex + 6 >= bw.Length)
-            //    return;
-
-            //var subSection = DataItem.CreateDataItem(offsetInFile + 4 + name.Length + 1 + 2 + 4 +bw.CurrentIndex, entireData);
-
-            //if (subSection is MListNode)
-            //{
-
-            //}
+         
         }
 
         public override string ToString()

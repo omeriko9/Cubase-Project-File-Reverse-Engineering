@@ -12,5 +12,17 @@ namespace Parse.DataItems
         {
 
         }
+
+        public override byte[] GetHeader()
+        {
+
+            List<byte> toReturn = new List<byte>();
+            
+            toReturn.AddRange(Encoding.ASCII.GetBytes(Name));
+            toReturn.AddRange(ToBigEndian(Data.Length));
+
+            return toReturn.ToArray();
+        }
+
     }
 }
