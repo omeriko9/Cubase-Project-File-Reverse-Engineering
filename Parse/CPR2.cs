@@ -27,6 +27,9 @@ namespace Parse
 
         public List<DataItem> FoundSections { get; set; } = new List<DataItem>();
 
+        public DataItem VSTMixer { get; set; } = null;
+        public DataItem TrackList { get; set; } = null;
+
         private byte[] bs2 = new byte[0];
         //bool bLastOneSkipped = false;
 
@@ -37,6 +40,8 @@ namespace Parse
             FillSections();
             FillTracks();
             FillVSTMixer();
+            VSTMixer = GetSection(DataItemFactory.sVSTMixer);
+            TrackList = GetSection(DataItemFactory.sMTrackList);
 
         }
 
@@ -127,7 +132,7 @@ namespace Parse
         {
             FMemoryStreamDataItem memoryStream = GetSection(DataItemFactory.sFMemoryStream) as FMemoryStreamDataItem;
             ByteWalker bwMemoryStream = new ByteWalker(memoryStream.Data);
-            var rollingOffset = memoryStream.DataOffsetInFile+8;
+            var rollingOffset = memoryStream.DataOffsetInFile + 8;
             bwMemoryStream.GetBytes(8);
 
             while (bwMemoryStream.CurrentIndex < memoryStream.Data.Length)
@@ -153,6 +158,7 @@ namespace Parse
             var stereoInStereoOutTotalOffset = 0;
 
             // Stereo In, Stereo Out
+            DataItem StereoOut = null;
             var distancesToNextString = new int[] { 0x26, 0x12A, 0x11C, 0x36 - 4 };
             for (int i = 0; i < 2; i++)
             {
@@ -174,11 +180,16 @@ namespace Parse
 
                 bs2 = bwVSTMixer.GetBytes(distancesToNextString[distancesToNextString.Length - 1]);
 
-                FillEffects(di, bwVSTMixer);
-                vstMixer.SubSections.Add(di);
-
+                FillEffects(di, bwVSTMixer, vstMixer.OffsetInFile);
                 if (i == 0)
+                {
+                    vstMixer.SubSections.Add(di);
                     bs2 = bwVSTMixer.GetBytesUntil(true, new byte[] { 0xAB, 0x19, 0xCD, 0x2A });
+                }
+                else
+                {
+                    StereoOut = di;
+                }
 
                 distancesToNextString = new int[] { 0x26, 0x87 };
             }
@@ -198,8 +209,9 @@ namespace Parse
 
             while (bwVSTMixer.CurrentIndex < allVstSize)
             {
-
+                var startOffset = bwVSTMixer.CurrentIndex + vstMixer.OffsetInFile + 18;
                 var sizeTillProlog = bwVSTMixer.GetInt();
+                var channelData = bwVSTMixer.PeekBytes(sizeTillProlog);
                 var endOfChannelOffset = bwVSTMixer.CurrentIndex + sizeTillProlog;
                 bwVSTMixer.CurrentIndex += sizeTillProlog;
                 var isData = bwVSTMixer.GetInt();
@@ -215,10 +227,13 @@ namespace Parse
                 var InsAudioChannelName = bwVSTMixer.GetString(bwVSTMixer.GetInt());
                 bs2 = bwVSTMixer.GetBytes((16 * 4) + 2 - 10);
 
-                DataItem VSTChannel = DataItemFactory.Create(InsDeviceName, new byte[] { }, 0);
+                DataItem VSTChannel = DataItemFactory.Create(InsDeviceName, channelData, startOffset);
                 VSTChannel.SectionSize = sizeTillProlog;
 
-                FillEffects(VSTChannel, bwVSTMixer);
+                //var bwEffects = new ByteWalker(VSTChannel.Data);
+                //bwEffects.CurrentIndex += sizeTillProlog;
+
+                FillEffects(VSTChannel, bwVSTMixer, vstMixer.OffsetInFile);
 
                 vstMixer.SubSections.Add(VSTChannel);
                 //var NextEffectName = bwVSTMixer.GetStringBySize();
@@ -238,6 +253,7 @@ namespace Parse
                     break;
             }
 
+            vstMixer.SubSections.Add(StereoOut);
         }
 
 
@@ -246,10 +262,7 @@ namespace Parse
             List<byte> toSave = new List<byte>();
             toSave.AddRange(Header);
             foreach (var s in FoundSections)
-            {
-                //toSave.AddRange(Encoding.ASCII.GetBytes(s.Name));
-                //toSave.AddRange(BitConverter.GetBytes(s.Data.Length).Reverse());
-                //toSave.AddRange(s.Data);
+            {               
                 toSave.AddRange(s.GetBytes());
             }
 
@@ -284,14 +297,17 @@ namespace Parse
             return null;
         }
 
-        public void FillEffects(DataItem Channel, ByteWalker bw)
+        public void FillEffects(DataItem Channel, ByteWalker bw, int iMixerOffsetInFile)
         {
             while (true)
             {
+                var indexBefore = bw.CurrentIndex;
                 var effect = GetEffectsForChannel(bw);
 
                 if (effect == null)
                     break;
+
+                effect.OffsetInFile = bw.OriginalOffsetInFile + indexBefore + 8;
 
                 Channel.SubSections.Add(effect);
             }
@@ -301,6 +317,7 @@ namespace Parse
         {
             var bs2 = bwVSTMixer.GetBytes(4);
             var NextEffectTotalSize = bwVSTMixer.GetInt();
+            var effectBytes = bwVSTMixer.PeekBytes(NextEffectTotalSize);
             bs2 = bwVSTMixer.GetBytes(2);
 
             if (NextEffectTotalSize < 0x10)
@@ -318,6 +335,7 @@ namespace Parse
 
             if (String.IsNullOrEmpty(sFirstEffect))
                 return null;
+
 
             bs2 = bwVSTMixer.GetBytes(5 * 4);
             var sizeToEffectEpilog = bwVSTMixer.GetInt();
@@ -341,7 +359,7 @@ namespace Parse
             var strbs = bwVSTMixer.GetStringBySize();
 
 
-            DataItem effect = DataItemFactory.Create(strbs, new byte[] { }, 0);
+            DataItem effect = DataItemFactory.Create(strbs, effectBytes, 0);
             return effect;
         }
 
@@ -364,8 +382,10 @@ namespace Parse
             if (!bw.bLastOneSkipped)
             {
                 var res = bw.GetBytesUntilDoNotExceed(false, maxOffset, Pad1, Pad2);
+
                 if (res == null)
                     return null;
+
                 if (LastDataItem != null)
                     LastDataItem.Suffix = res;
             }

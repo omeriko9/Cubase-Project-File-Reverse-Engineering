@@ -8,6 +8,7 @@ using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Security.Policy;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,70 +21,51 @@ namespace CPREditor
 {
     public partial class Form1 : Form
     {
-        string n2 = @"C:\Temp\playground\Play3\Original Chill\chill-01.cpr";
-        string n3 = @"C:\Temp\playground\Play3\chill-01.cpr";
-        ByteViewer bv = new ByteViewer();
+
         string SelectedFileName = "";
+
         WpfHexaEditor.HexEditor he = new WpfHexaEditor.HexEditor();
         System.Windows.Forms.ContextMenu tvCM = new ContextMenu();
+
         string RightClickedNode = "";
-        CPR2 current = null;
+
+        CPR2 currentCPR = null;
+        DataTable currentDT = null;
 
         public Form1()
         {
             InitializeComponent();
 
-            bv.Dock = DockStyle.Fill;
-            bv.Font = new Font("Consolas", 20);
-            bv.SetDisplayMode(DisplayMode.Hexdump);
             elementHost1.Child = he;
             he.ZoomScale = 1.3;
 
-            tvCM.MenuItems.Add("Copy", (x, y) => { Clipboard.SetText(RightClickedNode); });
+            tvCM.MenuItems.Add("Copy Name", (x, y) => { Clipboard.SetText(RightClickedNode); });
 
-        }
-
-        private void button1_Click(object sender, EventArgs e)
-        {
-            SelectedFileName = n2;
-            Parse();
-        }
-
-        private void button2_Click(object sender, EventArgs e)
-        {
-            SelectedFileName = n3;
-            Parse();
         }
 
         void Parse()
         {
             this.Text = "CPR Editor " + SelectedFileName;
 
-            treeView1.Nodes.Clear();
-            trvSections.Nodes.Clear();
-            lstTracks.Items.Clear();
+            ClearLoadedProject();
 
-            current = new CPR2();
-            current.Parse(File.ReadAllBytes(SelectedFileName));
+            currentCPR = new CPR2();
+            currentCPR.Parse(File.ReadAllBytes(SelectedFileName));
+            
+            SetDataGrid(currentCPR.VSTMixer.SubSections);
 
-            dataGridView1.DataSource = null;
-            dataGridView1.AutoGenerateColumns = true;
+            //currentDT = DataItem.ToDataTable(vstMixer.SubSections);
+            //currentDT.Columns["Stereo Out"].SetOrdinal(currentDT.Columns.Count - 1);           
 
-            var vstMixer = current.GetSection(DataItemFactory.sVSTMixer); 
-
-            var mixer = DataItem.ToDataTable(vstMixer.SubSections);
-            mixer.Columns["Stereo Out"].SetOrdinal(mixer.Columns.Count - 1);           
-
-            dataGridView1.DataSource = mixer;
+            //dataGridView1.DataSource = currentDT;         
 
             treeView1.ShowRootLines = trvSections.ShowRootLines = true;
 
-            PopulateTreeview(trvSections, current.FoundSections);
+            PopulateTreeview(trvSections, currentCPR.FoundSections);
 
-            var trackList = current.GetSection(DataItemFactory.sMTrackList);
-            if (trackList != null)
+            if (currentCPR.TrackList != null)
             {
-                foreach (var t in trackList.SubSections)
+                foreach (var t in currentCPR.TrackList.SubSections)
                 {
                     lstTracks.Items.Add(t.ToString());
                 }
@@ -92,7 +74,41 @@ namespace CPREditor
             toolStripMenuItem1.Enabled = true;
         }
 
+        void SetDataGrid(List<DataItem> channels)
+        {
+            foreach (var c in channels)
+            {
+                dataGridView1.Columns.Add(new DataGridViewTextBoxColumn() { HeaderText = c.Name });
+            }
 
+            foreach (var effect in channels.First().SubSections)
+            {
+                var row = new DataGridViewRow();
+                row.CreateCells(dataGridView1);
+                dataGridView1.Rows.Add(row);
+            }
+
+            for (int i = 0; i < channels.Count; i++)
+            {
+                var channel = channels[i];
+                
+                dataGridView1.Columns[i].DataPropertyName = "Name";
+                
+                for (int j=0; j<channels.First().SubSections.Count; j++)
+                {
+                    dataGridView1[i, j].Value = channel.SubSections[j];
+                }                
+            }
+        }
+
+        void ClearLoadedProject()
+        {
+            treeView1.Nodes.Clear();
+            trvSections.Nodes.Clear();
+            lstTracks.Items.Clear();
+            dataGridView1.DataSource = null;
+            dataGridView1.AutoGenerateColumns = false;
+        }
 
 
         void PopulateTreeview(TreeView tv, List<DataItem> items, TreeNode Parent = null)
@@ -123,7 +139,7 @@ namespace CPREditor
             }
         }
 
-     
+
 
         private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
         {
@@ -156,7 +172,7 @@ namespace CPREditor
         {
             lblCurrentDataItem.Text = di.Name;
             lblOffsetInFile.Text = $"0x{di.OffsetInFile.ToString("x4")}";
-            lblItemSize.Text = $"0x{di.SectionSize.ToString("x4")}";
+            lblItemSize.Text = di.Data?.Length > 0 ? $"0x{di.Data.Length.ToString("x4")}" : "0";
 
         }
 
@@ -187,15 +203,46 @@ namespace CPREditor
 
         private void toolStripMenuItem1_Click(object sender, EventArgs e)
         {
-            if (current != null)
+            if (currentCPR != null)
             {
                 SaveFileDialog sfd = new SaveFileDialog();
-                var res = sfd.ShowDialog(); 
+                var res = sfd.ShowDialog();
                 if (res == DialogResult.OK)
                 {
-                    current.Save(sfd.FileName);
+
+
+
+                    currentCPR.Save(sfd.FileName);
                 }
             }
+        }
+
+        private void dataGridView1_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+
+        private void dataGridView1_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.Value != null)
+            {
+                DataItem dt = e.Value as DataItem;
+
+                if (dt != null)
+                {
+                    e.Value = dt.Name;
+                    e.FormattingApplied = true;
+                }
+            }
+        }
+
+        private void dataGridView1_CellParsing(object sender, DataGridViewCellParsingEventArgs e)
+        {
+            var dt = currentCPR.VSTMixer.SubSections[e.ColumnIndex].SubSections[e.RowIndex] as DataItem;
+            dt.Name = e.Value.ToString();
+
+            e.Value = dt;
+            e.ParsingApplied = true;
         }
     }
 }

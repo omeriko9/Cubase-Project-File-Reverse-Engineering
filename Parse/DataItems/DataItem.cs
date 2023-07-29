@@ -2,7 +2,9 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq;
+using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -32,7 +34,12 @@ namespace Parse
 
         public override string ToString()
         {
-            return $"{Name} [0x{OffsetInFile.ToString("x4")}] (0x{SectionSize.ToString("x4")})";
+            var str = $"{Name} [0x{OffsetInFile.ToString("x4")}]";
+            if (Data?.Length > 0)
+                str += $" (0x{Data.Length.ToString("x4")})";
+            else
+                str += " (0)";
+            return str;
         }
 
         public virtual byte[] GetHeader()
@@ -169,7 +176,7 @@ namespace Parse
             var dataTable = new DataTable();
 
             // Generate Columns
-            items.Select((item, index) => new DataColumn(item.Name)).ToList().ForEach(dataTable.Columns.Add);
+            items.Select((item, index) => new DataColumn(item.Name, typeof(DataItem))).ToList().ForEach(z=> { dataTable.Columns.Add(z); });
 
             // Generate Rows
             var maxDepth = items.Max(x => x.SubSections.Count);
@@ -181,7 +188,7 @@ namespace Parse
                     var columnIndex = dataTable.Columns.IndexOf(column);
                     if (items[columnIndex].SubSections.Count > i)
                     {
-                        row[columnIndex] = items[columnIndex].SubSections[i].Name;
+                        row[columnIndex] = items[columnIndex].SubSections[i];//.Name;
                     }
                     else
                     {
@@ -193,5 +200,6 @@ namespace Parse
 
             return dataTable;
         }
+              
     }
 }

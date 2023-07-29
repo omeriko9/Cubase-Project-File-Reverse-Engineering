@@ -33,10 +33,7 @@ namespace ParseTests
 
         public void MakeSureChannel(CPR2 cpr)
         {
-            var smixer = cpr.GetSection(DataItemFactory.sVSTMixer);
-
-            var table = DataItem.ToDataTable(smixer.SubSections);
-            Assert.IsTrue(table.Rows[3].ItemArray[6].ToString() == "Native Reverb Plus");
+            Assert.IsTrue(cpr.VSTMixer.SubSections[5].SubSections[3].Name == "Native Reverb Plus");
         }
     }
 }
