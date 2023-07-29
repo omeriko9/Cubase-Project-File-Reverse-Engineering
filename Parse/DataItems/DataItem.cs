@@ -15,22 +15,18 @@ namespace Parse
     {
         public string Name { get; set; }
         public byte[] Data { get; set; } = new byte[0];
-
-        public bool IsContainer { get; set; } = false;
-
-        public bool AddDelimiterEvenNotContainer { get; set; } = false;
+        public bool IsDataLengthPartOfData { get; set; } = false;
         public byte[] Suffix { get; set; } = new byte[0];   
         public int SectionSize { get; set; }
-
         public int DataOffsetInSection { get; set; }
-
         public int DataOffsetInFile { get { return DataOffsetInSection + OffsetInFile; } }
-
         public int Nick { get; set; }
-
-        //public byte[] EndDelimiter = ByteWalker.Pad1;
-
+        public int OffsetInFile { get; set; }
+        public byte[] PostName { get; set; } = new byte[] { };
+        public int OffsetInSection { get; set; }
         public List<DataItem> SubSections { get; set; } = new List<DataItem>();
+
+
 
         public override string ToString()
         {
@@ -42,6 +38,7 @@ namespace Parse
             return str;
         }
 
+
         public virtual byte[] GetHeader()
         {
             List<byte> toReturn = new List<byte>();
@@ -49,6 +46,23 @@ namespace Parse
             toReturn.AddRange(GetStringSizeBigEndian(Name));
             toReturn.AddRange(StringToBytes(Name));
             toReturn.AddRange(ToBigEndian(Data.Length));          
+
+            return toReturn.ToArray();
+        }
+
+        public byte[] GetSectionNameBytes()
+        {
+            List<byte> toReturn = new List<byte>();
+
+            if (Nick != 0)
+            {
+                toReturn.AddRange(ToBigEndian(Nick));
+            }
+            else
+            {
+                toReturn.AddRange(GetStringSizeBigEndian(Name));
+                toReturn.AddRange(StringToBytes(Name));
+            }
 
             return toReturn.ToArray();
         }
@@ -102,11 +116,7 @@ namespace Parse
             }
         }
 
-        public int OffsetInFile { get; set; }
-
-        public byte[] PostName { get; set; }
-
-        public int OffsetInSection { get; set; }
+       
 
         public DataItem(string name, byte[] data, int offsetInFile)
         {
@@ -126,79 +136,10 @@ namespace Parse
         }
 
 
-        /// <summary>
-        /// Creates DataItem from current index.
-        /// Assumes that the data item is exactly at index
-        /// </summary>
-        /// <returns>Data Item to return</returns>
-        public static DataItem CreateDataItem(int pCurrentIndex, byte[] _data)
-        {
-            ByteWalker bw = new ByteWalker(_data);
-            bw.CurrentIndex = pCurrentIndex;
-            var DataItemNameSize = bw.GetInt();
-            var DataItemName = "";
-
-            if (DataItem.IsSectionNameBackReference(DataItemNameSize))
-            {
-                (DataItemNameSize, DataItemName) = DataItem.GetBackReferenceString(DataItemNameSize, _data);
-            }
-            else
-            {
-                DataItemName = bw.GetString(DataItemNameSize);
-                var tmpData = bw.GetBytes(2);
-            }
-
-
-
-            if (bw.PeekIsDelimiter())
-            {
-                var t = DataItemFactory.Create(DataItemName, new byte[0], pCurrentIndex);               
-                return t;
-            }
-
-            var DataItemSize = bw.GetInt();
-            var iNextSectionOffset = bw.CurrentIndex;
-            var DataItemData = bw.GetBytes(DataItemSize);
-
-            var toReturn = DataItemFactory.Create(DataItemName, DataItemData, pCurrentIndex);
-            toReturn.SectionSize = DataItemSize;           
-
-            return toReturn;
-
-        }
+      
         public static bool IsSectionNameBackReference(int pSectionNameSize)
         {
             return ((pSectionNameSize >> 31) & 1) == 1;
-        }
-
-        public static DataTable ToDataTable(List<DataItem> items)
-        {
-            var dataTable = new DataTable();
-
-            // Generate Columns
-            items.Select((item, index) => new DataColumn(item.Name, typeof(DataItem))).ToList().ForEach(z=> { dataTable.Columns.Add(z); });
-
-            // Generate Rows
-            var maxDepth = items.Max(x => x.SubSections.Count);
-            for (var i = 0; i < maxDepth; i++)
-            {
-                var row = dataTable.NewRow();
-                foreach (DataColumn column in dataTable.Columns)
-                {
-                    var columnIndex = dataTable.Columns.IndexOf(column);
-                    if (items[columnIndex].SubSections.Count > i)
-                    {
-                        row[columnIndex] = items[columnIndex].SubSections[i];//.Name;
-                    }
-                    else
-                    {
-                        row[columnIndex] = DBNull.Value;
-                    }
-                }
-                dataTable.Rows.Add(row);
-            }
-
-            return dataTable;
         }
               
     }

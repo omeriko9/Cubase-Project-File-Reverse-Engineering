@@ -404,7 +404,7 @@ namespace Parse
             }
 
             var sectionName = "";
-            byte[] sectionPostName = null;
+            byte[] sectionPostName = new byte[] { };
             var sectionNameSize = 0;
             int nick = 0;
 
@@ -427,7 +427,7 @@ namespace Parse
 
 
             var indexBeforeData = bw.CurrentIndex;
-            byte[] sectionData = null;
+            byte[] sectionData = new byte[] { };
             byte[] suffixCurrent = null;
 
             if (Sections.ContainsKey(sectionName))

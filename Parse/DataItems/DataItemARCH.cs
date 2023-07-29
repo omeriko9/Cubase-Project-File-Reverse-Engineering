@@ -22,48 +22,17 @@ namespace Parse.DataItems
 
             foreach (var s in SubSections)
             {
+                toReturn.AddRange(s.GetSectionNameBytes());
+                toReturn.AddRange(s.PostName);
 
-                if (s.Nick != 0)
+                if (!s.IsDataLengthPartOfData && s.Data.Length > 0)
                 {
-                    toReturn.AddRange(ToBigEndian(s.Nick));
-                }
-                else
-                {
-                    toReturn.AddRange(GetStringSizeBigEndian(s.Name));
-                    toReturn.AddRange(StringToBytes(s.Name));
+                    toReturn.AddRange(ToBigEndian(s.Data.Length));
                 }
 
-                if (s.PostName != null)
-                    toReturn.AddRange(s.PostName);
+                toReturn.AddRange(s.Data);
+                toReturn.AddRange(s.Suffix);
 
-                if (s.Data == null || s.Data.Length == 0)
-                {
-                    if (s.Suffix.Length > 0)
-                        toReturn.AddRange(s.Suffix);
-                    //toReturn.AddRange(s.EndDelimiter);
-                }
-                else
-                {
-                    if (!s.IsContainer)
-                    {
-                        toReturn.AddRange(ToBigEndian(s.Data.Length));
-                        toReturn.AddRange(s.Data);
-
-                        //if (s.AddDelimiterEvenNotContainer)
-                        //    toReturn.AddRange(s.EndDelimiter);
-                        if (s.Suffix.Length > 0)
-                            toReturn.AddRange(s.Suffix);
-                    }
-                    else
-                    {
-                        toReturn.AddRange(s.Data);
-                        if (s.Suffix.Length > 0)
-                            toReturn.AddRange(s.Suffix);
-                        //else
-                        //    toReturn.AddRange(s.EndDelimiter);
-                    }
-
-                }
             }
 
             return toReturn.ToArray();
@@ -74,7 +43,6 @@ namespace Parse.DataItems
             List<byte> toReturn = new List<byte>();
             toReturn.AddRange(Encoding.ASCII.GetBytes(Name));
             toReturn.AddRange(ToBigEndian(Data.Length));
-            //toReturn.AddRange(EndDelimiter);           
 
             return toReturn.ToArray();
         }

@@ -10,7 +10,7 @@ namespace Parse.DataItems
     {
         public PDrumMapEntryDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
-            IsContainer = true;            
+            IsDataLengthPartOfData = true;            
         }
     }
 
@@ -18,7 +18,7 @@ namespace Parse.DataItems
     {
         public PLayoutTrackDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
-            IsContainer = true;            
+            IsDataLengthPartOfData = true;            
         }
     }
 
@@ -26,7 +26,7 @@ namespace Parse.DataItems
     {
         public FAttributesDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
-            IsContainer = true;
+            IsDataLengthPartOfData = true;
         }
     }
 
@@ -34,7 +34,7 @@ namespace Parse.DataItems
     {
         public UColorSetDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
-            IsContainer = true;
+            IsDataLengthPartOfData = true;
         }
     }
 
@@ -42,7 +42,7 @@ namespace Parse.DataItems
     {
         public PPoolDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
-            IsContainer = true;
+            IsDataLengthPartOfData = true;
         }
     }
 
@@ -66,7 +66,7 @@ namespace Parse.DataItems
     {
         public MMarkerTrackEventDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
-            IsContainer = true;
+            IsDataLengthPartOfData = true;
         }
     }
 
@@ -74,7 +74,7 @@ namespace Parse.DataItems
     {
         public MAutoFadeSettingDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
-            IsContainer = true;
+            IsDataLengthPartOfData = true;
         }
     }
 
@@ -82,7 +82,7 @@ namespace Parse.DataItems
     {
         public MInterpolatorDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
-            IsContainer = true;
+            IsDataLengthPartOfData = true;
         }
     }
 
@@ -90,7 +90,7 @@ namespace Parse.DataItems
     {
         public MLinearInterpolatorDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
-            IsContainer = true;
+            IsDataLengthPartOfData = true;
         }
     }
 
@@ -122,7 +122,7 @@ namespace Parse.DataItems
     {
         public MGridQuantizeDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
-            IsContainer = true;
+            IsDataLengthPartOfData = true;
         }
     }
 
@@ -130,7 +130,7 @@ namespace Parse.DataItems
     {
         public MMidiQuantizeDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
-            IsContainer = true;
+            IsDataLengthPartOfData = true;
 
         }
     }
@@ -147,7 +147,7 @@ namespace Parse.DataItems
     {
         public MRootDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
-            IsContainer = true;
+            IsDataLengthPartOfData = true;
         }
     }
 
@@ -155,7 +155,7 @@ namespace Parse.DataItems
     {
         public PAMDDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
-            IsContainer = true;
+            IsDataLengthPartOfData = true;
         }
     }
 
@@ -164,7 +164,7 @@ namespace Parse.DataItems
         public PArrangementDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
             SectionSize = BitConverter.ToInt32(data.Reverse().ToArray(), 0);
-            IsContainer = true;
+            IsDataLengthPartOfData = true;
         }
     }
 
@@ -172,14 +172,14 @@ namespace Parse.DataItems
     {
         public PDrumMapDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
-            IsContainer = true;
+            IsDataLengthPartOfData = true;
         }
     }
     public class PDrumMapPoolDataItem : DataItem
     {
         public PDrumMapPoolDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
-            IsContainer = true;
+            IsDataLengthPartOfData = true;
         }
     }
 }
