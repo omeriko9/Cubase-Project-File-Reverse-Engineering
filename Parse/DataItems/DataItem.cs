@@ -6,6 +6,7 @@ using System.Data.Common;
 using System.Linq;
 using System.Security.Policy;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
@@ -41,12 +42,29 @@ namespace Parse
 
         public virtual byte[] GetHeader()
         {
-            return null;
+            List<byte> toReturn = new List<byte>();
+            toReturn.AddRange(Encoding.ASCII.GetBytes(Name));
+            toReturn.AddRange(ToBigEndian(Data.Length));
+
+            return toReturn.ToArray();
         }
 
         public virtual byte[] GetBytes()
         {
-            return null;
+            var toReturn = new List<byte>();
+
+            toReturn.AddRange(GetSectionNameBytes());
+            toReturn.AddRange(PostName);
+
+            if (!IsDataLengthPartOfData && Data.Length > 0)
+            {
+                toReturn.AddRange(ToBigEndian(Data.Length));
+            }
+
+            toReturn.AddRange(Data);
+            toReturn.AddRange(Suffix);
+
+            return toReturn.ToArray();
         }
 
         public byte[] GetSectionNameBytes()
@@ -74,9 +92,7 @@ namespace Parse
         public byte[] ToBigEndian(int i)
         {
             return BitConverter.GetBytes(i).Reverse()  .ToArray();
-        }
-
-      
+        }      
 
         public byte[] StringToBytes(string str)
         {
@@ -93,9 +109,7 @@ namespace Parse
                     Encoding.ASCII.GetString(Data.Select(c => (c >= 32 && c <= 127) ? c : (byte)63).ToArray())
                     .Split(new char[] { '?' }, StringSplitOptions.RemoveEmptyEntries).Where(x => x.Count() > 1));
             }
-        }
-
-       
+        }       
 
         public DataItem(string name, byte[] data, int offsetInFile)
         {
@@ -113,8 +127,6 @@ namespace Parse
 
             return (DataItemNameSize, DataItemName);
         }
-
-
       
         public static bool IsSectionNameBackReference(int pSectionNameSize)
         {

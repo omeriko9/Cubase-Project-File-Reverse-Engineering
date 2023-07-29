@@ -94,13 +94,7 @@ namespace Parse.DataItems
         }
     }
 
-    internal class FMemoryStreamDataItem : DataItem
-    {
-        public FMemoryStreamDataItem(string name, byte[] pdata, int offsetInFile) : base(name, pdata, offsetInFile)
-        {
-
-        }
-    }
+    
 
     public class MDataNodeDataItem : DataItem
     {

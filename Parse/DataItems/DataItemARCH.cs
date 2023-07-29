@@ -22,29 +22,11 @@ namespace Parse.DataItems
 
             foreach (var s in SubSections)
             {
-                toReturn.AddRange(s.GetSectionNameBytes());
-                toReturn.AddRange(s.PostName);
-
-                if (!s.IsDataLengthPartOfData && s.Data.Length > 0)
-                {
-                    toReturn.AddRange(ToBigEndian(s.Data.Length));
-                }
-
-                toReturn.AddRange(s.Data);
-                toReturn.AddRange(s.Suffix);
-
+                toReturn.AddRange(s.GetBytes());
             }
 
             return toReturn.ToArray();
         }
 
-        public override byte[] GetHeader()
-        {
-            List<byte> toReturn = new List<byte>();
-            toReturn.AddRange(Encoding.ASCII.GetBytes(Name));
-            toReturn.AddRange(ToBigEndian(Data.Length));
-
-            return toReturn.ToArray();
-        }
     }
 }

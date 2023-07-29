@@ -108,6 +108,7 @@ namespace CPREditor
             lstTracks.Items.Clear();
             dataGridView1.DataSource = null;
             dataGridView1.AutoGenerateColumns = false;
+            dataGridView1.Columns.Clear();
         }
 
 
