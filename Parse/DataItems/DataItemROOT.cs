@@ -24,5 +24,13 @@ namespace Parse.DataItems
             return toReturn.ToArray();
         }
 
+        public override byte[] GetBytes()
+        {
+            var toReturn = new List<byte>();
+            toReturn.AddRange(GetHeader());
+            toReturn.AddRange(this.Data);
+            return toReturn.ToArray();
+        }
+
     }
 }

@@ -41,13 +41,12 @@ namespace Parse
 
         public virtual byte[] GetHeader()
         {
-            List<byte> toReturn = new List<byte>();
+            return null;
+        }
 
-            toReturn.AddRange(GetStringSizeBigEndian(Name));
-            toReturn.AddRange(StringToBytes(Name));
-            toReturn.AddRange(ToBigEndian(Data.Length));          
-
-            return toReturn.ToArray();
+        public virtual byte[] GetBytes()
+        {
+            return null;
         }
 
         public byte[] GetSectionNameBytes()
@@ -77,27 +76,7 @@ namespace Parse
             return BitConverter.GetBytes(i).Reverse()  .ToArray();
         }
 
-        public virtual byte[] GetBytes()
-        {
-            var toReturn = new List<byte>();
-            toReturn.AddRange(GetHeader());
-
-            if (this.SubSections.Count > 0)
-            {
-                foreach (var sub in this.SubSections)
-                {
-                    List<byte> sec = new List<byte>();
-                    sec.AddRange(sub.GetBytes());
-                }
-            }
-            else
-            {
-                toReturn.AddRange(this.Data);
-            }
-
-            return toReturn.ToArray();
-
-        }
+      
 
         public byte[] StringToBytes(string str)
         {
