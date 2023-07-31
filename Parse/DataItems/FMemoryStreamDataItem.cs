@@ -22,10 +22,7 @@ namespace Parse.DataItems
             int numOfSections = SubSections.Count;
             int TotalDataLengthInSection =
                 4 + 4 +                 // Second Data Length + Number of sections
-                (4 * numOfSections) +   // Sections String Size
-                SubSections.Sum(x => x.Name.Length + 1) +
-                (4 * numOfSections) +   // SubSections Data Size in 4 byte
-                SubSections.Sum(x => x.Data.Length);
+                SubSections.Sum(x => x.GetBytes().Length);
            
             toReturn.AddRange(ToBigEndian(TotalDataLengthInSection));
             toReturn.AddRange(ToBigEndian(TotalDataLengthInSection - 4));

@@ -24,7 +24,6 @@ namespace Parse.DataItems
         public const string sPAMD = "PAMD";
         public const string sPDrumMapPool = "PDrumMapPool";
 
-
         public static DataItem Create(string name, byte[] data, int offsetInFile)
         {
 
@@ -38,7 +37,7 @@ namespace Parse.DataItems
                // alternative: where type.IsSubclassOf(typeof(B))
                select type).ToArray();
 
-            var ourType = listOfBs.Where(x => x.Name.Replace("DataItem", "") == name).FirstOrDefault();
+            var ourType = listOfBs.Where(x => x.Name.Replace("DataItem", "").Replace("_", " ") == name).FirstOrDefault();
 
             if (ourType == null)
             {

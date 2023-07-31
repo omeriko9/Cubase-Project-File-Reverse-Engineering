@@ -32,5 +32,21 @@ namespace Parse
         {
             return arr.Skip(offset).SkipWhile(x => x == toTrim).ToArray();
         }
+
+        public static byte[] Merge(this byte[] arr, params byte[][] arrays)
+        {
+            byte[] rv = new byte[arr.Length + arrays.Sum(a => a.Length)];
+            int offset = 0;
+
+            System.Buffer.BlockCopy(arr, 0, rv, offset, arr.Length);
+            offset += arr.Length;
+
+            foreach (byte[] array in arrays)
+            {
+                System.Buffer.BlockCopy(array, 0, rv, offset, array.Length);
+                offset += array.Length;
+            }
+            return rv;
+        }
     }
 }

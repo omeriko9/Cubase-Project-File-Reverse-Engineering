@@ -210,9 +210,6 @@ namespace CPREditor
                 var res = sfd.ShowDialog();
                 if (res == DialogResult.OK)
                 {
-
-
-
                     currentCPR.Save(sfd.FileName);
                 }
             }

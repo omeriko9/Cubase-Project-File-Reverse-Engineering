@@ -57,6 +57,9 @@
     <Compile Include="DataItems\MMidiTrackEventDataItem.cs" />
     <Compile Include="DataItems\MTrackListDataItem.cs" />
     <Compile Include="DataItems\ManyDataItems.cs" />
+    <Compile Include="DataItems\VSTChannelDataItem.cs" />
+    <Compile Include="DataItems\VSTEffectDataItem.cs" />
+    <Compile Include="DataItems\VST_MixerDataItem.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="ByteWalker.cs" />
     <Compile Include="Program.cs" />

@@ -150,41 +150,49 @@ namespace Parse
                 rollingOffset = bwMemoryStream.CurrentIndex + memoryStream.DataOffsetInFile;
             }
 
-            DataItem vstMixer = memoryStream.SubSections.Where(x => x.Name.Equals("VST Mixer")).First();
+            VST_MixerDataItem vstMixer = GetSection("VST Mixer") as VST_MixerDataItem;// memoryStream.SubSections.Where(x => x.Name.Equals("VST Mixer")).First();
             var bwVSTMixer = new ByteWalker(vstMixer.Data, vstMixer.DataOffsetInFile);
 
-            bwVSTMixer.CurrentIndex += (4 + 29 + (5 * 4) + 3);
+            //bwVSTMixer.CurrentIndex += (4 + 29 + (5 * 4) + 3);
+            vstMixer.PostName = bwVSTMixer.GetBytes((4 + 29 + (5 * 4) + 3));
 
             var stereoInStereoOutTotalOffset = 0;
 
             // Stereo In, Stereo Out
-            DataItem StereoOut = null;
+            VSTBuiltInChannelDataItem StereoOut = null;
             var distancesToNextString = new int[] { 0x26, 0x12A, 0x11C, 0x36 - 4 };
             for (int i = 0; i < 2; i++)
             {
-                var abThing = bwVSTMixer.GetInt();
-                var oneThing = bwVSTMixer.GetInt();
-                //var vstItemNameSize = bwVSTMixer.GetInt();
+                var preName = bwVSTMixer.GetBytes(8);
                 var vstItemName = bwVSTMixer.GetStringBySize();
-                var four = bwVSTMixer.GetInt();
+                var four = bwVSTMixer.GetBytes(4); //bwVSTMixer.GetInt();
                 var vstSize = bwVSTMixer.GetInt();
                 var offsetInF = bwVSTMixer.CurrentIndex + vstMixer.OffsetInFile - 1;
-                DataItem di = DataItemFactory.Create(vstItemName, bwVSTMixer.PeekBytes(vstSize), offsetInF);
+                var di = new VSTBuiltInChannelDataItem(vstItemName, bwVSTMixer.PeekBytes(vstSize), offsetInF);
+                di.PreName = preName.ToArray();
+                di.PostName = four;
                 di.SectionSize = vstSize;
 
                 for (int z = 0; z < distancesToNextString.Length - 1; z++)
                 {
                     bs2 = bwVSTMixer.GetBytes(distancesToNextString[z]);
-                    var str = bwVSTMixer.GetStringBySize();
+                    di.PostSize = di.PostSize.Merge(bs2);
+                    var sSize = bwVSTMixer.GetInt();
+                    var sString = bwVSTMixer.GetBytes(sSize);
+                    di.PostSize = di.PostSize.Merge(BitConverter.GetBytes(sSize).Reverse().ToArray(), sString);
+
+                    //var str = bwVSTMixer.GetStringBySize();
                 }
 
                 bs2 = bwVSTMixer.GetBytes(distancesToNextString[distancesToNextString.Length - 1]);
+                di.PostSize = di.PostSize.Merge(bs2);
 
                 FillEffects(di, bwVSTMixer, vstMixer.OffsetInFile);
                 if (i == 0)
                 {
                     vstMixer.SubSections.Add(di);
                     bs2 = bwVSTMixer.GetBytesUntil(true, new byte[] { 0xAB, 0x19, 0xCD, 0x2A });
+                    di.PostEffects = di.PostEffects.Merge(bs2);
                 }
                 else
                 {
@@ -196,49 +204,68 @@ namespace Parse
 
             stereoInStereoOutTotalOffset = vstMixer.SubSections.Last().OffsetInFile + vstMixer.SubSections.Last().SectionSize + 0x13;
 
-            bwVSTMixer.GetBytesUntil(true, VSTSeparator);
+            bs2 = bwVSTMixer.GetBytesUntil(true, VSTSeparator);
+            StereoOut.PostEffects = StereoOut.PostEffects.Merge(bs2);
+            StereoOut.SubstractFromTotalSize = 8;
 
             if (!bwVSTMixer.PeekBytes(4).SequenceEqual(VSTSeparator))
                 return;
 
+            var indexAfterStereoOut = bwVSTMixer.CurrentIndex;
+
             // All Vsts Prefix
-            var abThing2 = bwVSTMixer.GetInt();         // AB 19 CD 2B (VSTSeparator)
-            var oneThing2 = bwVSTMixer.GetInt();        // 00 00 00 01 
+            //var abThing2 = bwVSTMixer.GetInt();         // AB 19 CD 2B (VSTSeparator)
+            //var oneThing2 = bwVSTMixer.GetInt();        // 00 00 00 01 
+            StereoOut.PostEffects = StereoOut.PostEffects.Merge(bwVSTMixer.GetBytes(4 + 4));
             var allVstSize = bwVSTMixer.GetInt();
-            var vstPrefix = bwVSTMixer.GetBytes(4 + 4 + 4 + 4); // 12        // 00 00 00 00 00 00 00 06 00 00 00 40 00 00 00 02                                             00 00 00 02
+            vstMixer.AllVstSize = allVstSize;
+
+            //var vstPrefix = bwVSTMixer.GetBytes(4 + 4 + 4 + 4); // 12        // 00 00 00 00 00 00 00 06 00 00 00 40 00 00 00 02                                             00 00 00 02
+            vstMixer.AfterStereoBeforeVSTs = bwVSTMixer.GetBytes(16);
+
 
             while (bwVSTMixer.CurrentIndex < allVstSize)
             {
                 var startOffset = bwVSTMixer.CurrentIndex + vstMixer.OffsetInFile + 18;
                 var sizeTillProlog = bwVSTMixer.GetInt();
-                var channelData = bwVSTMixer.PeekBytes(sizeTillProlog);
+                var ChannelOnlyData = bwVSTMixer.GetBytes(sizeTillProlog);
                 var endOfChannelOffset = bwVSTMixer.CurrentIndex + sizeTillProlog;
-                bwVSTMixer.CurrentIndex += sizeTillProlog;
+
                 var isData = bwVSTMixer.GetInt();
 
 
                 // No channels in VST Mixer
                 if (isData == 0)
+                {
+                    vstMixer.NoChannelsInMixer = BitConverter.GetBytes(sizeTillProlog).Reverse().ToArray().Merge(ChannelOnlyData);
+
                     return;
+                }
 
-                bs2 = bwVSTMixer.GetBytes(8);
+                var bs2PreInsDeviceName = bwVSTMixer.GetBytes(8);
                 var InsDeviceName = bwVSTMixer.GetString(bwVSTMixer.GetInt());
-                bs2 = bwVSTMixer.GetBytes(4 + 4 + (9 * 4) + 2);
+                var bs2PreAudioChannelName = bwVSTMixer.GetBytes(4 + 4 + (9 * 4) + 2);
                 var InsAudioChannelName = bwVSTMixer.GetString(bwVSTMixer.GetInt());
-                bs2 = bwVSTMixer.GetBytes((16 * 4) + 2 - 10);
+                var bs2PostAudioChannelName = bwVSTMixer.GetBytes((16 * 4) + 2 - 10);
 
-                DataItem VSTChannel = DataItemFactory.Create(InsDeviceName, channelData, startOffset);
+                VSTChannelDataItem VSTChannel = new VSTChannelDataItem(InsDeviceName, ChannelOnlyData, startOffset);
                 VSTChannel.SectionSize = sizeTillProlog;
+                VSTChannel.SizeTillProlog = sizeTillProlog;
+                VSTChannel.PreInsDeviceName = bs2PreInsDeviceName;
+                VSTChannel.PreAudioChannelName = bs2PreAudioChannelName;
+                VSTChannel.PostAudioChannelName = bs2PostAudioChannelName;
+                VSTChannel.AudioChannelName = InsAudioChannelName;
+                VSTChannel.IsData = isData;
+                VSTChannel.ChannelOnlyData = ChannelOnlyData;
 
-                //var bwEffects = new ByteWalker(VSTChannel.Data);
-                //bwEffects.CurrentIndex += sizeTillProlog;
+
 
                 FillEffects(VSTChannel, bwVSTMixer, vstMixer.OffsetInFile);
 
                 vstMixer.SubSections.Add(VSTChannel);
-                //var NextEffectName = bwVSTMixer.GetStringBySize();
 
                 // try get next one:
+                var indexBeforeThingy = bwVSTMixer.CurrentIndex;
                 var intt = bwVSTMixer.GetInt();
                 bs2 = bwVSTMixer.GetBytes(intt);
                 bs2 = bwVSTMixer.GetBytes(6);
@@ -248,9 +275,23 @@ namespace Parse
                 intt = bwVSTMixer.GetInt();
                 bs2 = bwVSTMixer.GetBytes(intt);
                 bs2 = bwVSTMixer.GetBytes(34 + 4);
+                var indexAfterThiny = bwVSTMixer.CurrentIndex;
+                bwVSTMixer.CurrentIndex = indexBeforeThingy;
+                VSTChannel.PostEffects = VSTChannel.PostEffects.Merge(bwVSTMixer.GetBytes(indexAfterThiny - indexBeforeThingy));
 
-                if (bwVSTMixer.PeekInt() == 9)
-                    break;
+                //if (bwVSTMixer.PeekInt() == 9)
+                //{
+                //    VSTChannel.PostEffects.Merge(new byte[] { 0, 0, 0, 9 });
+                //    break;
+                //}
+
+                // Last one
+                if (bwVSTMixer.PeekInt() == 9 || bwVSTMixer.CurrentIndex >= allVstSize)
+                {
+                    var sectionSizeUpdated = vstMixer.SectionSize;// + 8 + vstMixer.Name.Length + 1;
+                    var toRead = sectionSizeUpdated - bwVSTMixer.CurrentIndex;
+                    VSTChannel.PostEffects = VSTChannel.PostEffects.Merge(bwVSTMixer.GetBytes(toRead));
+                }
             }
 
             vstMixer.SubSections.Add(StereoOut);
@@ -262,7 +303,7 @@ namespace Parse
             List<byte> toSave = new List<byte>();
             toSave.AddRange(Header);
             foreach (var s in FoundSections)
-            {               
+            {
                 toSave.AddRange(s.GetBytes());
             }
 
@@ -297,12 +338,18 @@ namespace Parse
             return null;
         }
 
-        public void FillEffects(DataItem Channel, ByteWalker bw, int iMixerOffsetInFile)
+        public void FillEffects(VSTGenericChannelDataItem Channel, ByteWalker bw, int iMixerOffsetInFile)
         {
             while (true)
             {
                 var indexBefore = bw.CurrentIndex;
                 var effect = GetEffectsForChannel(bw);
+
+                if (String.IsNullOrEmpty(effect.Name))
+                {
+                    Channel.PostEffects = Channel.PostEffects.Merge(effect.Data);
+                    break;
+                }
 
                 if (effect == null)
                     break;
@@ -315,33 +362,36 @@ namespace Parse
 
         public DataItem GetEffectsForChannel(ByteWalker bwVSTMixer)
         {
-            var bs2 = bwVSTMixer.GetBytes(4);
-            var NextEffectTotalSize = bwVSTMixer.GetInt();
-            var effectBytes = bwVSTMixer.PeekBytes(NextEffectTotalSize);
-            bs2 = bwVSTMixer.GetBytes(2);
+            var bPreSize = bwVSTMixer.GetBytes(4);
+            var EffectTotalSize = bwVSTMixer.GetInt();
+            var effectBytes = bwVSTMixer.PeekBytes(EffectTotalSize);
+            var postSize = bwVSTMixer.GetBytes(2);
 
-            if (NextEffectTotalSize < 0x10)
+            if (EffectTotalSize < 0x10)
             {
-                bs2 = bwVSTMixer.GetBytes(NextEffectTotalSize - 2);
-                DataItem emptySlot = DataItemFactory.Create("{Empty}", new byte[] { }, 0);
-                //VSTChannel.SubSections.Add(emptySlot);
-                return emptySlot;// continue;
+                postSize = postSize.Merge(bwVSTMixer.GetBytes(EffectTotalSize - 2));
+                VSTEffectDataItem emptySlot = new VSTEffectDataItem("{Empty}", new byte[] { }, 0);
+                emptySlot.PreSize = bPreSize;
+                emptySlot.PostSize = postSize;
+
+                return emptySlot;
             }
 
-            if (NextEffectTotalSize == 0x60000)
-                return null;
+            if (EffectTotalSize == 0x60000)
+                return new DataItem("", bPreSize.Merge(BitConverter.GetBytes(EffectTotalSize).Reverse().ToArray(), postSize), 0);
 
             var sFirstEffect = bwVSTMixer.GetStringBySize();
 
             if (String.IsNullOrEmpty(sFirstEffect))
-                return null;
+                return new DataItem("", bPreSize.Merge(BitConverter.GetBytes(EffectTotalSize).Reverse().ToArray(), postSize), 0);
 
 
-            bs2 = bwVSTMixer.GetBytes(5 * 4);
+            var postFullName = bwVSTMixer.GetBytes(5 * 4);
             var sizeToEffectEpilog = bwVSTMixer.GetInt();
-            bwVSTMixer.CurrentIndex += sizeToEffectEpilog;
+            var postSizeToEpilog = bwVSTMixer.GetBytes(sizeToEffectEpilog);
             //bs2 = bwVSTMixer.GetBytes(30);
 
+            var indexBeforeStuff = bwVSTMixer.CurrentIndex;
 
             for (int j = 0; j < 2; j++)
             {
@@ -352,14 +402,25 @@ namespace Parse
                 for (int i = 0; i < howMany; i++)
                     bs2 = bwVSTMixer.GetBytes(4);
             }
-            bs2 = bwVSTMixer.GetBytes(2 + 4);
+
+            var indexAfterStuff = bwVSTMixer.CurrentIndex;
+            bwVSTMixer.CurrentIndex = indexBeforeStuff;
+            postSizeToEpilog = postSizeToEpilog.Merge(bwVSTMixer.GetBytes(indexAfterStuff - indexBeforeStuff));
+            postSizeToEpilog = postSizeToEpilog.Merge(bwVSTMixer.GetBytes(2 + 4));
 
             var sizeUntilStringEpilogSize = bwVSTMixer.GetInt();
-            bwVSTMixer.CurrentIndex += sizeUntilStringEpilogSize;
+            var bytesUntilStringEpilog = bwVSTMixer.GetBytes(sizeUntilStringEpilogSize); // bwVSTMixer.CurrentIndex += sizeUntilStringEpilogSize;
             var strbs = bwVSTMixer.GetStringBySize();
 
 
-            DataItem effect = DataItemFactory.Create(strbs, effectBytes, 0);
+            VSTEffectDataItem effect = new VSTEffectDataItem(strbs, effectBytes, 0);
+            effect.SizeToEffectEpilog = sizeToEffectEpilog;
+            effect.PostSize = postSize;
+            effect.PostSizeToEpilog = postSizeToEpilog;
+            effect.UntilStringEpilogSize = bytesUntilStringEpilog;
+            effect.PreSize = bPreSize;
+            effect.FullName = sFirstEffect;
+            effect.PostFullName = postFullName;
             return effect;
         }
 
@@ -489,6 +550,7 @@ namespace Parse
             { "GModel", new SectionProperties() { HasSize = false} },
             { "FShared", new SectionProperties() { HasSize = false} },
             { "CmObject", new SectionProperties() { HasSize = false} },
+            { "CmString", new SectionProperties() { HasSize = true, Skip = true} },
             //{ "PArrangement", new SectionProperties() { HasSize = true} },
             { "MGroupEvent", new SectionProperties() { HasSize = false} },
             { "MPartEvent", new SectionProperties() { HasSize = false} },
@@ -521,6 +583,11 @@ namespace Parse
 //            { "PArrangement", new SectionProperties() { HasSize = true, Skip=true } },
             { "PAMD", new SectionProperties() { TwoBytesLength = 1, HasSize = false } },
             //{ "PDrumMap", new SectionProperties() { HasSize = true, Skip=true } },
+            
+            // Cubase 10
+            //{ "FAttributes", new SectionProperties() { HasSize = true, Skip=true} },
+            
+            //{ "StMedia::PAttributes", new SectionProperties() { HasSize = true, Skip=true} },
 
         };
     }

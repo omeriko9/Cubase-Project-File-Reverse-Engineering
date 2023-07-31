@@ -126,5 +126,7 @@ namespace Parse
             return toReturn.TrimEnd('\0');
         }
 
+        
+
     }
 }

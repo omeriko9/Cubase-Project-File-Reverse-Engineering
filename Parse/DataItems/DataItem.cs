@@ -25,6 +25,8 @@ namespace Parse
         public int OffsetInFile { get; set; }
         public byte[] PostName { get; set; } = new byte[] { };
         public int OffsetInSection { get; set; }
+
+        public int EndOfSection { get; set; }
         public List<DataItem> SubSections { get; set; } = new List<DataItem>();
 
 
