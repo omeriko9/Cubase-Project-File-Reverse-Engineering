@@ -1,4 +1,10 @@
-# Cubase Project File Reverse Engineering 
+# Cubase Project File Editor
+
+View and edit .CPR files for Cubase versions 2 and 3:
+
+![image](https://github.com/omeriko9/Cubase-Project-File-Reverse-Engineering/assets/5153984/af48a6c5-7cd8-40d4-80db-3d8cc2b2ede7)
+
+Long story:
 
 While prying my old cubase project files, I encountered a graduation cubase project I made when studying home music production.
 I could load it in Cubase SX2, but for some reason, several VST's (mainly, Waves Bundle Compressors and EQs) had an addition to their name, e.g. instead of **C1 Comp** it appeared as **C1 Comp (z)**, instead of **REQ 4 bands** it was named **REQ 4 bands (z)** etc.
@@ -14,9 +20,5 @@ I managed to extract part of the 'VST Mixer' (F3 in Cubase) and to display it. I
 The tool in its current state also try to display the file hierarchy in a Tree View form.
 
 Written in .NET Framework 4.8, Winform.
-
-Screenshot of the current state of the tool:
-
-![image](https://github.com/omeriko9/Cubase-Project-File-Reverse-Engineering/assets/5153984/b8583fc4-6c4c-40c4-b63e-741af80d9682)
 
 Please do not currently ask me for features as this project is in its perliminary stages, and I'm still working on bugs and features I miss (for example, I still didn't implemented re-saving the project file after changing the VTS names).
