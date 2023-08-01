@@ -19,10 +19,10 @@ As per writing these lines, it is still work in progress, as I'm doing solely by
 I managed to extract part of the 'VST Mixer' (F3 in Cubase) and to display it. 
 I also managed to identify several tracks such as MIDI and Audio tracks, and display their names.
 
-**Unfortunately**, editing the VST effect name is not enough for some reason, and even after changing the name and 'compiling' a valid .cpr file, Cubase still claims that the VST effect is 'missing'.
+**Unfortunately**, editing the VST effect name is not enough for some reason, and even after changing the name and 'compiling' a valid .cpr file, fixing sections and strings size, Cubase still claims that the VST effect is 'missing'.
 
-The tool in its current state also try to display the file hierarchy in a Tree View form.
+The tool also try to display the file hierarchy in a Tree View form.
 
 Written in .NET Framework 4.8, Winform.
 
-Please do not currently ask me for features as this project is in its perliminary stages, and I'm still working on bugs and features I miss (for example, I still didn't implemented re-saving the project file after changing the VTS names).
+Please do not currently ask me for features as this project is in its perliminary stages, and I'm still working on bugs and missing features.
