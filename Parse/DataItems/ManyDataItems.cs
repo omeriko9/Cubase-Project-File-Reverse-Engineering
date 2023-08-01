@@ -26,7 +26,7 @@ namespace Parse.DataItems
     {
         public FAttributesDataItem(string name, byte[] data, int offsetInFile) : base(name, data, offsetInFile)
         {
-            IsDataLengthPartOfData = true;
+            IsDataLengthPartOfData = false;
         }
     }
 

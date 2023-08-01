@@ -8,6 +8,7 @@ using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Security.Policy;
 using System.Text;
 using System.Threading;
@@ -41,10 +42,29 @@ namespace CPREditor
 
             tvCM.MenuItems.Add("Copy Name", (x, y) => { Clipboard.SetText(RightClickedNode); });
 
+            this.AllowDrop = true;
+            this.DragEnter += new DragEventHandler(Form1_DragEnter);
+            this.DragDrop += new DragEventHandler(Form1_DragDrop);
+
+        }
+
+        void Form1_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy;
+        }
+
+        void Form1_DragDrop(object sender, DragEventArgs e)
+        {
+            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            SelectedFileName = files.FirstOrDefault();
+            Parse();
         }
 
         void Parse()
         {
+            if (String.IsNullOrEmpty(SelectedFileName))
+                return;
+
             this.Text = "CPR Editor " + SelectedFileName;
 
             ClearLoadedProject();

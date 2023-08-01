@@ -178,6 +178,11 @@ namespace Parse
                     bs2 = bwVSTMixer.GetBytes(distancesToNextString[z]);
                     di.PostSize = di.PostSize.Merge(bs2);
                     var sSize = bwVSTMixer.GetInt();
+                    if (sSize == 0) // Cubase 3.0
+                    {
+                        sSize = bwVSTMixer.GetInt();
+                        distancesToNextString[distancesToNextString.Length - 1] += 4;
+                    }
                     var sString = bwVSTMixer.GetBytes(sSize);
                     di.PostSize = di.PostSize.Merge(BitConverter.GetBytes(sSize).Reverse().ToArray(), sString);
 
@@ -235,14 +240,20 @@ namespace Parse
 
 
                 // No channels in VST Mixer
+                var iPreInsDeviceNameLength = 8;
                 if (isData == 0)
                 {
                     vstMixer.NoChannelsInMixer = BitConverter.GetBytes(sizeTillProlog).Reverse().ToArray().Merge(ChannelOnlyData);
 
-                    return;
+                    break;
                 }
 
-                var bs2PreInsDeviceName = bwVSTMixer.GetBytes(8);
+                if (isData == 0x20000)
+                {
+                    iPreInsDeviceNameLength = 12;
+                }
+
+                var bs2PreInsDeviceName = bwVSTMixer.GetBytes(iPreInsDeviceNameLength);
                 var InsDeviceName = bwVSTMixer.GetString(bwVSTMixer.GetInt());
                 var bs2PreAudioChannelName = bwVSTMixer.GetBytes(4 + 4 + (9 * 4) + 2);
                 var InsAudioChannelName = bwVSTMixer.GetString(bwVSTMixer.GetInt());
@@ -257,8 +268,6 @@ namespace Parse
                 VSTChannel.AudioChannelName = InsAudioChannelName;
                 VSTChannel.IsData = isData;
                 VSTChannel.ChannelOnlyData = ChannelOnlyData;
-
-
 
                 FillEffects(VSTChannel, bwVSTMixer, vstMixer.OffsetInFile);
 
@@ -412,7 +421,7 @@ namespace Parse
             var bytesUntilStringEpilog = bwVSTMixer.GetBytes(sizeUntilStringEpilogSize); // bwVSTMixer.CurrentIndex += sizeUntilStringEpilogSize;
             var strbs = bwVSTMixer.GetStringBySize();
 
-
+            
             VSTEffectDataItem effect = new VSTEffectDataItem(strbs, effectBytes, 0);
             effect.SizeToEffectEpilog = sizeToEffectEpilog;
             effect.PostSize = postSize;
@@ -421,6 +430,13 @@ namespace Parse
             effect.PreSize = bPreSize;
             effect.FullName = sFirstEffect;
             effect.PostFullName = postFullName;
+
+            if (bwVSTMixer.PeekInt() == 0) // Cubase 3.1.1
+            {
+                effect.PostName = bwVSTMixer.GetBytes(6);
+            }
+
+
             return effect;
         }
 
@@ -585,7 +601,7 @@ namespace Parse
             //{ "PDrumMap", new SectionProperties() { HasSize = true, Skip=true } },
             
             // Cubase 10
-            //{ "FAttributes", new SectionProperties() { HasSize = true, Skip=true} },
+            { "FAttributes", new SectionProperties() { HasSize = true, Skip=false} },
             
             //{ "StMedia::PAttributes", new SectionProperties() { HasSize = true, Skip=true} },
 

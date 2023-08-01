@@ -193,9 +193,11 @@
             // 
             // listBox1
             // 
+            this.listBox1.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.listBox1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.listBox1.FormattingEnabled = true;
             this.listBox1.Location = new System.Drawing.Point(0, 0);
+            this.listBox1.Margin = new System.Windows.Forms.Padding(3, 3, 3, 0);
             this.listBox1.Name = "listBox1";
             this.listBox1.Size = new System.Drawing.Size(317, 313);
             this.listBox1.TabIndex = 5;
@@ -377,9 +379,11 @@
             // 
             // lstTracks
             // 
+            this.lstTracks.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.lstTracks.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lstTracks.FormattingEnabled = true;
             this.lstTracks.Location = new System.Drawing.Point(0, 0);
+            this.lstTracks.Margin = new System.Windows.Forms.Padding(3, 3, 3, 0);
             this.lstTracks.Name = "lstTracks";
             this.lstTracks.Size = new System.Drawing.Size(366, 211);
             this.lstTracks.TabIndex = 0;

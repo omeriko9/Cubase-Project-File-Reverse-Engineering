@@ -10,12 +10,28 @@ namespace Parse
     {
         private byte[] _data = null;
 
-        public int CurrentIndex = 0;
+        public List<int> LastCurrentIndecies = new List<int>();
+
+        private int _CurrentIndex = 0;
+        public int CurrentIndex
+        {
+            get { return _CurrentIndex; }
+            set
+            {
+                if (value > 0x4000000) throw new Exception("Bad parse"); 
+                _CurrentIndex = value;
+                if (LastCurrentIndecies.Count > 10)
+                {
+                    LastCurrentIndecies.RemoveAt(0);
+                }
+                LastCurrentIndecies.Add(_CurrentIndex);
+            }
+        }
         public int OriginalOffsetInFile = 0;
 
         public static byte[] Pad1 = new byte[4] { 0xFF, 0xFF, 0xFF, 0xFE };
         public static byte[] Pad2 = new byte[4] { 0xFF, 0xFF, 0xFF, 0xFF };
-       
+
         public bool bLastOneSkipped { get; set; } = false;
         public int TotalSize { get { return _data.Length; } }
 
@@ -38,9 +54,9 @@ namespace Parse
             while (cur[iCur] == 0x0)
                 iCur++;
 
-           
-            CurrentIndex += iCur; 
-            return iCur; 
+
+            CurrentIndex += iCur;
+            return iCur;
         }
 
 
@@ -107,7 +123,7 @@ namespace Parse
             return toReturn.ToArray();
         }
 
-     
+
         public byte[] PeekBytes(int length)
         {
             return _data.Skip(CurrentIndex).Take(length).ToArray();
@@ -126,7 +142,7 @@ namespace Parse
             return toReturn.TrimEnd('\0');
         }
 
-        
+
 
     }
 }

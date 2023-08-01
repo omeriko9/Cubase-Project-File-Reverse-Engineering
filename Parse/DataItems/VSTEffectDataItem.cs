@@ -27,7 +27,7 @@ namespace Parse.DataItems
             set
             {
                 pFullName = value;
-                FullNameWithoutName = FullName.Substring(0, FullName.IndexOf(Name));
+                FullNameWithoutName = FullName.IndexOf(Name) > 0 ? FullName.Substring(0, FullName.IndexOf(Name)) : FullName;
             }
         }
 
@@ -92,6 +92,8 @@ namespace Parse.DataItems
 
             toReturn.AddRange(iNameLength);
             toReturn.AddRange(iNameBytes);
+
+            toReturn.AddRange(PostName);
 
             return toReturn.ToArray();
         }
