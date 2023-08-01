@@ -16,7 +16,11 @@ Since the problem and solution are obvious (removing the (z) suffix), I searched
 In order to do so I needed to reverse engineer the Cubase SX2 project file format.
 As per writing these lines, it is still work in progress, as I'm doing solely by creating projects, saving them and examining the binary file (.cpr file).
 
-I managed to extract part of the 'VST Mixer' (F3 in Cubase) and to display it. I also managed to identify several tracks such as MIDI and Audio tracks, and display their names.
+I managed to extract part of the 'VST Mixer' (F3 in Cubase) and to display it. 
+I also managed to identify several tracks such as MIDI and Audio tracks, and display their names.
+
+**Unfortunately**, editing the VST effect name is not enough for some reason, and even after changing the name and 'compiling' a valid .cpr file, Cubase still claims that the VST effect is 'missing'.
+
 The tool in its current state also try to display the file hierarchy in a Tree View form.
 
 Written in .NET Framework 4.8, Winform.
